@@ -1,0 +1,9 @@
+# O .exe vai na página de Releases (não no histórico do git)
+*.exe
+build/game.zip
+# ferramentas de teste local
+versao-navegador/tools/devserver.py
+versao-navegador/tools/autotest.js
+__pycache__/
+Thumbs.db
+desktop.ini

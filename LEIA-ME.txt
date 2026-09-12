@@ -1,0 +1,55 @@
+REPAIR SIMULATOR  (versão 1.2)
+Assistência técnica de dia, cassino à noite — um roguelike estilo visual novel.
+
+COMO ABRIR
+  Dê dois cliques em "Repair Simulator.exe".
+  - Funciona 100% offline: o jogo inteiro está dentro do .exe (modelos 3D, sons, músicas, fontes).
+  - Abre numa janela própria (usa o Microsoft Edge que já vem no Windows, em modo aplicativo).
+  - Nada é instalado. Os saves ficam em %LOCALAPPDATA%\RepairSimulator.
+  - Tela cheia: tecla F (ou F11). Som: tecla M. Para sair: "Sair" no menu ou feche a janela.
+  A pasta "versao-navegador" tem o mesmo jogo em arquivos soltos (abra o index.html).
+
+COMO JOGAR
+  DE DIA — 19 clientes diferentes chegam na loja. Ouça o problema, aceite, negocie (+30%) ou recuse.
+  NA BANCADA 3D — 34 aparelhos: celulares, tablets, notebooks, videogames portáteis, Nintendinho,
+  controles, câmeras, rádio boombox, caixinha de som, iPódios, walkie-talkie, telefone de disco,
+  calculadora, tamagochi, relógios, drones e óculos VR. Siga as etapas do painel da direita:
+    1 Mão · 2 Chave de fenda · 3 Soprador · 4 Palheta · 5 Pinça
+    6 Multímetro · 7 Ferro de solda · 8 Escova · 9 Lupa
+    - Parafusos, soprador, solda, escova e abas adesivas: SEGURE o clique.
+    - Celulares/tablets/consoles são colados (aqueça antes de abrir); os outros são aparafusados.
+    - Meça os pontos de teste com o multímetro e compare com os valores normais.
+      O cliente nem sempre sabe o que tem: "não liga" pode ser bateria, chip ou água!
+    - Cada tipo de aparelho tem seu módulo: câmera, cooler, analógico, lente, alto-falante,
+      motor de hélice ou slot de cartucho.
+    - A lupa mostra o estado de cada peça ao passar o mouse.
+    - Riscos: abrir sem aquecer pode trincar a tela; mexer com a bateria ligada dá curto;
+      soprador ou ferro tempo demais queimam; diagnóstico errado custa peça e tempo.
+      Integridade chegou a 0%? Você destruiu o aparelho e paga indenização.
+  XP E LEVEL UP — cada conserto dá XP. A cada nível você escolhe 1 de 3 melhorias sorteadas
+  (são 50 no total, com raridade Comum, Rara, Épica e Lendária). Dá pra trocar as opções.
+  COMBO — consertos perfeitos seguidos aumentam o pagamento (🔥 Combo xN).
+  CLIENTE VIP — às vezes aparece um cliente 👑 que paga 2,2x mais.
+  MISSÃO DO DIA — cumpra e ganhe dinheiro + um item.
+  LOJINHA DA ESQUINA (Tati) — 32 itens que mudam todo dia (dá pra pedir estoque novo).
+  Ficam na MOCHILA 🎒 (tecla I). Cada item vale num contexto: conserto, dia, cassino ou sempre.
+    O maço de cigarro só pode ser fumado no cassino: animação 3D, sorte +2 e prêmios +10%
+    por 8 apostas (mas o cheiro tira reputação). É um item de ficção do jogo — fumar faz mal à saúde.
+  CONQUISTAS E RELÍQUIAS — 20 conquistas liberam 20 relíquias PERMANENTES, que continuam
+  valendo em todas as partidas, mesmo depois de falir. Veja em "Coleção" no menu.
+  FIM DO DIA — o aluguel é cobrado (e sobe 17% todo dia).
+  À NOITE — escolha UMA coisa (a lojinha da esquina não conta):
+    Cassino: caça-níqueis (3 máquinas, jackpot progressivo), roleta, raspadinhas,
+             Mega-Sorte (sorteio ao sair) e caixa misteriosa. Dá pra apostar TUDO.
+    Loja de melhorias: 4 das 50 melhorias (troca por dinheiro) e peças para o estoque.
+  SE O DINHEIRO ACABAR, O JOGO ACABA. Meta: R$ 10.000.
+
+ARQUIVOS (versao-navegador)
+  index.html ............ o jogo
+  js/ ................... código (three.js, cenas, personagens, conserto, cassino)
+  js/models_data.js ..... os modelos 3D embutidos (para funcionar sem servidor)
+  models/ ............... os modelos 3D originais baixados (.glb) + credits.json
+  audio/ ................ músicas (Kevin MacLeod) e efeitos (Kenney)
+  fonts/ ................ fontes Fredoka e Nunito (licença OFL)
+  tools/pack_models.py .. regenera js/models_data.js se trocar modelos
+  CREDITOS.txt .......... autores e licenças de todos os assets

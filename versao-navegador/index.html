@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>REPAIR SIMULATOR</title>
+<link rel="icon" type="image/png" href="icon.png">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<canvas id="gl"></canvas>
+<div id="flash"></div>
+<div id="glitch"></div>
+<div id="haze"></div>
+
+<!-- HUD superior -->
+<div id="hud" class="hidden">
+  <div class="hud-pill lvl" id="hud-lvl">Nv 1</div>
+  <div class="hud-pill" id="hud-day">Dia 1</div>
+  <div class="hud-pill" id="hud-time">09:00</div>
+  <div class="hud-pill money" id="hud-money">R$ 0</div>
+  <div class="hud-pill" id="hud-rep" title="Reputação">★★★☆☆</div>
+  <div class="hud-pill small" id="hud-rent" title="Aluguel cobrado no fim do dia">Aluguel: R$ 0</div>
+  <div class="hud-pill combo hidden" id="hud-combo"></div>
+  <button class="hud-btn bag" id="btn-bag" title="Mochila (I)">🎒</button>
+  <button class="hud-btn" id="btn-mute" title="Som (M)">♪</button>
+  <button class="hud-btn" id="btn-fs" title="Tela cheia (F)">⛶</button>
+</div>
+
+<div id="hud-buffs" class="hidden"></div>
+
+<!-- Caixa de diálogo VN -->
+<div id="vn" class="hidden">
+  <div id="vn-choices"></div>
+  <div id="vn-box">
+    <div id="vn-name">Nome</div>
+    <div id="vn-text"></div>
+    <div id="vn-next">▼</div>
+  </div>
+  <div id="vn-quick"><span data-q="auto">Auto</span><span data-q="skip">Pular</span></div>
+</div>
+
+<!-- Interface do conserto -->
+<div id="repair-ui" class="hidden">
+  <div id="rp-left" class="panel">
+    <div class="rp-title" id="rp-device">Aparelho</div>
+    <div class="rp-sub" id="rp-owner">Cliente</div>
+    <div class="rp-row"><span>Sintoma:</span> <b id="rp-symptom">—</b></div>
+    <div class="rp-row"><span>Defeito:</span> <b id="rp-fault">?</b></div>
+    <div class="rp-row"><span>Integridade</span></div>
+    <div class="bar"><div id="rp-integ" class="bar-fill good"></div></div>
+    <div class="rp-row"><span>Tempo</span> <b id="rp-timer">0:00</b> <small id="rp-par"></small></div>
+    <div class="rp-row"><span>Valor combinado:</span> <b id="rp-price">R$ 0</b></div>
+    <button id="rp-giveup" class="mini-btn">Desistir do serviço</button>
+  </div>
+  <div id="rp-right" class="panel">
+    <div class="rp-title">Etapas</div>
+    <ol id="rp-steps"></ol>
+  </div>
+  <div id="rp-banner"><div id="rp-instr">...</div><div id="rp-meter" class="hidden"><div id="rp-meter-fill"></div><span id="rp-meter-label"></span></div></div>
+  <div id="rp-multi" class="hidden">
+    <div class="lcd" id="rp-lcd">---</div>
+    <div class="legend">Valores normais:<br>BAT 3.7–4.2 V · USB 4.8–5.2 V<br>LCD 1.8 V · CAM 2.8 V · CPU 0.9–1.1 V</div>
+  </div>
+  <div id="rp-tools"></div>
+  <div id="rp-tip"></div>
+</div>
+
+<!-- Interface do cassino -->
+<div id="casino-ui" class="hidden">
+  <div id="cs-nav"></div>
+  <div id="cs-panel" class="panel neon"></div>
+</div>
+
+<!-- Telas cheias (menus) -->
+<div id="screen" class="hidden"></div>
+<div id="store-ui" class="hidden"></div>
+<div id="bag" class="hidden"></div>
+<div id="toasts"></div>
+<div id="tooltip"></div>
+<div id="loading">
+  <div class="load-title">REPAIR<br><span>SIMULATOR</span></div>
+  <div class="load-bar"><div id="load-fill"></div></div>
+  <div id="load-text">Carregando...</div>
+</div>
+
+<script src="js/three.min.js"></script>
+<script src="js/GLTFLoader.js"></script>
+<script src="js/pp/CopyShader.js"></script>
+<script src="js/pp/LuminosityHighPassShader.js"></script>
+<script src="js/pp/EffectComposer.js"></script>
+<script src="js/pp/ShaderPass.js"></script>
+<script src="js/pp/RenderPass.js"></script>
+<script src="js/pp/MaskPass.js"></script>
+<script src="js/pp/UnrealBloomPass.js"></script>
+<script src="js/models_data.js"></script>
+<script src="js/audio.js"></script>
+<script src="js/assets.js"></script>
+<script src="js/chars.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/meta.js"></script>
+<script src="js/shop.js"></script>
+<script src="js/store.js"></script>
+<script src="js/repair.js"></script>
+<script src="js/casino.js"></script>
+<script src="js/game.js"></script>
+</body>
+</html>
