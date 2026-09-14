@@ -20,7 +20,7 @@
 
   let built = false;
   const group = new THREE.Group(); scene.add(group);
-  let skyMat, windowLight, neonMat, openSign;
+  let skyMat, windowLight, neonMat, openSign, wallMat, levelProps = null, curLevel = 1;
   const slot = new THREE.Group(); slot.position.set(0, 0.12, 0.6); scene.add(slot);
   let sprite = null;
 
@@ -43,7 +43,7 @@
       g.fillStyle = 'rgba(255,255,255,.6)'; for (let y = 16; y < h; y += 64) for (let x = 8; x < w; x += 32) { g.beginPath(); g.arc(x, y + ((x / 32) % 2) * 32, 3, 0, 7); g.fill(); }
     });
     wallT.wrapS = wallT.wrapT = THREE.RepeatWrapping; wallT.repeat.set(6, 2);
-    const wallM = M(0xffffff, { map: wallT });
+    const wallM = M(0xffffff, { map: wallT }); wallMat = wallM;
     const back = new THREE.Mesh(new THREE.PlaneGeometry(14, 5), wallM); back.position.set(0, 2.5, -4); back.receiveShadow = true; group.add(back);
     const left = new THREE.Mesh(new THREE.PlaneGeometry(12, 5), wallM); left.rotation.y = Math.PI / 2; left.position.set(-6, 2.5, 0); group.add(left);
     const right = left.clone(); right.rotation.y = -Math.PI / 2; right.position.x = 6; group.add(right);
@@ -114,10 +114,40 @@
     if (window.DECOR) DECOR.apply();
   }
 
+  // Reforma: muda papel de parede, letreiro e luzes conforme o nível da loja (1–4)
+  const LEVELS = {
+    1: { wall: ['#ffe3f1', '#ffd0e7'], neon: 'REPAIR SIMULATOR ♥', glow: '#ff2bd6', lamp: .5 },
+    2: { wall: ['#e7fff5', '#c9f7e4'], neon: 'REPAIR SIMULATOR ★', glow: '#2ec4b6', lamp: .6 },
+    3: { wall: ['#efe7ff', '#dccbff'], neon: 'REPAIR SIMULATOR PRO', glow: '#29f3ff', lamp: .7 },
+    4: { wall: ['#2b124c', '#3c1a66'], neon: 'MEGA REPAIR ✦', glow: '#ffd23f', lamp: .85 },
+  };
+  function setLevel(lv) {
+    lv = Math.max(1, Math.min(4, lv | 0)); if (!built) build(); curLevel = lv;
+    const L = LEVELS[lv];
+    const wt = tex(256, 256, (g, w, h) => {
+      g.fillStyle = L.wall[0]; g.fillRect(0, 0, w, h);
+      for (let x = 0; x < w; x += 32) { g.fillStyle = L.wall[1]; g.fillRect(x, 0, 16, h); }
+      g.fillStyle = lv === 4 ? 'rgba(255,210,63,.8)' : 'rgba(255,255,255,.6)';
+      for (let y = 16; y < h; y += 64) for (let x = 8; x < w; x += 32) { g.beginPath(); g.arc(x, y + ((x / 32) % 2) * 32, lv >= 3 ? 4 : 3, 0, 7); g.fill(); }
+    });
+    wt.wrapS = wt.wrapT = THREE.RepeatWrapping; wt.repeat.set(6, 2);
+    wallMat.map = wt; wallMat.needsUpdate = true;
+    neonMat.map = tex(1024, 200, (g, w, h) => { g.clearRect(0, 0, w, h); g.font = 'bold 84px Fredoka, sans-serif'; g.textAlign = 'center'; g.shadowColor = L.glow; g.shadowBlur = 30; g.fillStyle = '#fffbf0'; g.fillText(L.neon, w / 2, 140); g.fillText(L.neon, w / 2, 140); });
+    neonMat.needsUpdate = true;
+    lamps.forEach(l => l.intensity = L.lamp);
+    if (levelProps) { group.remove(levelProps); levelProps = null; }
+    if (lv >= 3) {
+      levelProps = new THREE.Group();
+      for (const x of [-1.2, 1.2]) { const sp = ASSETS.get('spotlight', { size: .45, fit: 'max' }); sp.position.set(x, 4.05, -3.7); sp.rotation.x = -.6; levelProps.add(sp); }
+      if (lv >= 4) { const tr = ASSETS.get('trophy', { size: .38, fit: 'max' }); tr.position.set(-1.35, 1.05, 2.0); levelProps.add(tr); const c = ASSETS.get('coinpile', { size: .36 }); c.position.set(1.3, 1.05, 1.9); levelProps.add(c); }
+      group.add(levelProps);
+    }
+  }
+
   // Clientes extras em cena (briga entre dois clientes)
   const extras = [];
   async function showExtra(def, x, fromDir = -1) {
-    const sp = await makeSprite(def, 2.8);
+    const sp = await makeSprite(def, def.height || 2.8);
     const holder = new THREE.Group(); holder.position.set(x, 0.12, 0.6); holder.add(sp.obj); scene.add(holder);
     sp.holder = holder; extras.push(sp);
     sp.obj.position.x = 3.5 * fromDir; sp.mesh.material.opacity = 0;
@@ -147,7 +177,7 @@
 
   async function showCustomer(def) {
     hideCustomer();
-    const sp = await makeSprite(def, 2.85);
+    const sp = await makeSprite(def, def.height || 2.85);
     sprite = sp; slot.add(sp.obj);
     VN.speaker = sp;
     // entra deslizando
@@ -172,7 +202,7 @@
     scene, camera, group, hooks, shelfTop: 2.6,
     get sprite() { return sprite; },
     init() { build(); },
-    setTime, showCustomer, leaveCustomer, hideCustomer, showExtra, leaveExtra, clearExtras,
+    setTime, showCustomer, leaveCustomer, hideCustomer, showExtra, leaveExtra, clearExtras, setLevel, get level() { return curLevel; },
     onEnter() { build(); },
     update(dt, t) {
       if (sprite) sprite.update(dt);

@@ -617,6 +617,7 @@
       spots.forEach(([x, z], i) => {
         const g = new THREE.Group();
         for (let k = 0; k < 6; k++) { const b = new THREE.Mesh(new THREE.SphereGeometry(0.05 + Math.random() * 0.04, 8, 6), M(k % 2 ? 0x7fe0a0 : 0xe8f5e9, { roughness: 1 })); b.position.set((Math.random() - .5) * .16, 0.16, (Math.random() - .5) * .16); b.scale.y = .4; g.add(b); }
+        const hit = new THREE.Mesh(new THREE.SphereGeometry(0.13, 8, 6), new THREE.MeshBasicMaterial({ visible: false })); hit.position.y = 0.16; g.add(hit);
         g.position.set(x, 0, z); inner.add(g); reg('rust' + i, g, 'Oxidação verde', 'Corrosão por líquido');
       });
     }
@@ -714,6 +715,7 @@
       [[-r * .5, -r * .1], [r * .1, -r * .6], [-r * .1, r * .3]].forEach(([x, z], i) => {
         const g = new THREE.Group();
         for (let k = 0; k < 5; k++) { const b = new THREE.Mesh(new THREE.SphereGeometry(0.035, 8, 6), M(k % 2 ? 0xb5651d : 0x8d6e63, { roughness: 1 })); b.position.set((Math.random() - .5) * .1, 0.11, (Math.random() - .5) * .1); b.scale.y = .5; g.add(b); }
+        const hit = new THREE.Mesh(new THREE.SphereGeometry(0.09, 8, 6), new THREE.MeshBasicMaterial({ visible: false })); hit.position.y = 0.12; g.add(hit);
         g.position.set(x, 0, z); inner.add(g); reg('rust' + i, g, 'Ferrugem', 'Corrosão por água');
       });
     }
@@ -1522,7 +1524,12 @@
       const tpn = MODS[modKind(job.type)].tp;
       UI.$('#rp-multi .legend').innerHTML = job.type === 'watch' ? 'Valores normais:<br>BAT 1.5 V · MOV 1.5 V' : `Valores normais:<br>BAT 3.7–4.2 V · USB 4.8–5.2 V<br>LCD 1.8 V · ${tpn} 2.8 V · CPU 0.9–1.1 V`;
       updateHUD(); selectTool('hand');
-      UI.$('#rp-giveup').onclick = () => { if (!finished && confirm('Desistir? O cliente vai embora bravo e não paga nada.')) { finished = true; finish(false, 'giveup'); } };
+      UI.$('#rp-giveup').onclick = () => {
+        if (finished) return;
+        const sc = UI.screen(`<div class="card"><h2>Desistir do serviço?</h2><p>O cliente vai embora bravo e não paga nada.</p><button class="btn red" id="gv-y">Desistir</button> <button class="btn green" id="gv-n">Continuar consertando</button></div>`, 'dim');
+        sc.querySelector('#gv-y').onclick = () => { UI.closeScreen(); if (!finished) { finished = true; finish(false, 'giveup'); } };
+        sc.querySelector('#gv-n').onclick = () => UI.closeScreen();
+      };
       // câmera entra suavemente
       const from = new V3(0, 9, 7);
       camIntro = 1.05; camLookCur.copy(CAM_LOOK);

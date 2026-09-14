@@ -1,4 +1,4 @@
-// REPAIR SIMULATOR — executável offline.
+﻿// REPAIR SIMULATOR — executável offline.
 // O jogo inteiro vai embutido no .exe (game.zip como recurso). O programa sobe um servidor
 // HTTP local só em 127.0.0.1 e abre o jogo numa janela de aplicativo do Edge (sem barra de endereço).
 // Nada é baixado nem enviado para a internet.
@@ -17,8 +17,8 @@ using System.Windows.Forms;
 [assembly: AssemblyTitle("REPAIR SIMULATOR")]
 [assembly: AssemblyProduct("REPAIR SIMULATOR")]
 [assembly: AssemblyDescription("Assistência técnica de dia, cassino à noite.")]
-[assembly: AssemblyVersion("1.3.0.0")]
-[assembly: AssemblyFileVersion("1.3.0.0")]
+[assembly: AssemblyVersion("1.4.0.0")]
+[assembly: AssemblyFileVersion("1.4.0.0")]
 
 static class Program
 {

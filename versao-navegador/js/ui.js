@@ -113,6 +113,8 @@
         };
       });
     },
+    setSkip(v) { skip = !!v; const s = document.querySelector('#vn-quick [data-q="skip"]'); if (s) s.classList.toggle('on', skip); if (skip && advance) advance(); },
+    get skipping() { return skip; },
     // choose([{label, sub, value, disabled}]) => value
     choose(opts) {
       this.show();
@@ -131,6 +133,7 @@
     },
   };
   vnBox.addEventListener('click', () => advance && advance());
+  document.getElementById('cut-skip').onclick = () => { VN.setSkip(!skip); document.getElementById('cut-skip').classList.toggle('on', skip); };
   window.addEventListener('keydown', e => {
     if ((e.code === 'Space' || e.code === 'Enter') && !vn.classList.contains('hidden') && advance && !vnChoices.children.length) { e.preventDefault(); advance(); }
   });

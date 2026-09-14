@@ -32,7 +32,7 @@
     { id: 'fair', head: 'Feira de tecnologia no centro', txt: 'Clientes chegam com aparelhos caros: +20% no pagamento.', payMult: 1.2, w: 1, good: 1 },
     { id: 'strike', head: 'Greve de ônibus', txt: 'Poucos clientes (−1), mas os que vêm são fiéis: gorjetas +40%.', cust: -1, tip: 1.4, w: .9 },
   ];
-  const FLAVOR = ['Gato da Dona Cida é eleito o mais fofo do bairro', 'Padaria anuncia pão de queijo de 1 metro', 'Moradores reclamam de pombos "muito ousados"', 'Cientista local explode (de novo) o próprio laboratório', 'Influencer do bairro troca de celular pela 5ª vez no mês', 'Tio Zeca promete churrasco "pro bairro todo" domingo', 'Cassino Lucky ♥ Neon bate recorde de jackpots', 'Novo sabor de energético esgota no Mercadinho 24h', 'Vó Lurdes pinta o cabelo de verde e vira tendência', 'Estudante passa em Cálculo 3 e faz festa na rua', 'Rival "Conserta Já" é visto comprando peças no camelô', 'Chef de lámen derruba caldo em mais um celular', 'Cartomante prevê "grandes mudanças" no comércio', 'Skatista cai de novo na mesma calçada; calçada vence', 'Streamer do bairro atinge 1.000 seguidores'];
+  const FLAVOR = ['Gato da Dona Cida é eleito o mais fofo do bairro', 'Padaria anuncia pão de queijo de 1 metro', 'Moradores reclamam de pombos "muito ousados"', 'Cientista local explode (de novo) o próprio laboratório', 'Influencer do bairro troca de celular pela 5ª vez no mês', 'Tio Zeca promete churrasco "pro bairro todo" domingo', 'Cassino Lucky ♥ Neon bate recorde de jackpots', 'Novo sabor de energético esgota no Mercadinho 24h', 'Vó Lurdes pinta o cabelo de verde e vira tendência', 'Estudante passa em Cálculo 3 e faz festa na rua', 'Funcionário da ConsertaJá é visto comprando peças no camelô', 'Chef de lámen derruba caldo em mais um celular', 'Cartomante prevê "grandes mudanças" no comércio', 'Skatista cai de novo na mesma calçada; calçada vence', 'Streamer do bairro atinge 1.000 seguidores'];
   const WEATHER = ['☀️ Sol, 29°C', '🌤️ Parcialmente nublado, 25°C', '🌧️ Chuva à tarde, 21°C', '⛅ Abafado, 31°C', '🌬️ Ventania, 19°C', '🌈 Sol com chuva (casamento de viúva), 24°C'];
 
   function rollDaily() {
@@ -84,6 +84,8 @@
     g.reviews = (g.reviews || []).concat(r).slice(-30);
     g.dayReviews = (g.dayReviews || []).concat(r);
     const avg = g.reviews.reduce((a, x) => a + x.stars, 0) / g.reviews.length;
+    if (mod('reviewBonus') > 0 && stars === 5) GAME.repChange(.05);
+    if (stars === 1) GAME.repChange(mod('reviewBonus') > 0 ? -.02 : -.05);
     UI.toast(`${'⭐'.repeat(stars)}<small style="opacity:.4">${'☆'.repeat(5 - stars)}</small> <b>${npc.name}</b>: “${r.text}”<br><small>Guia do Bairro: ${avg.toFixed(1)} ★</small>`, stars >= 4 ? 'good' : stars <= 2 ? 'bad' : '');
   }
 
@@ -94,7 +96,7 @@
     const g = G();
     const types = ['phone', 'phone', 'tablet', 'console', 'laptop', 'controller', 'camera', 'audio', 'watch'];
     const type = pick(types); const need = type === 'phone' ? 3 : 2;
-    return { company: pick(COMPANIES), type, typeName: TYPE_NAME[type], need, have: 0, due: g.day + (need === 3 ? 3 : 2), reward: r5((160 + g.day * 30) * need), penalty: r5(60 + g.day * 10), done: false };
+    return { company: pick(COMPANIES), type, typeName: TYPE_NAME[type], need, have: 0, due: g.day + (need === 3 ? 3 : 2), reward: r5((160 + g.day * 30) * need * (1 + mod('contractBonus'))), penalty: r5(60 + g.day * 10), done: false };
   }
   function contractProgress(job, integ) {
     const g = G(); for (const c of g.contracts || []) {
@@ -140,7 +142,7 @@
   function catchGame({ img, hits = 3, time = 5.5, title = 'PEGUE!', size = 150 }) {
     VN.hide();
     return new Promise(res => {
-      const ov = document.createElement('div'); ov.className = 'mini';
+      const ov = document.createElement('div'); ov.className = 'mg-overlay';
       ov.innerHTML = `<div class="mini-head"><b>${title}</b> <span class="mini-hits">0/${hits}</span> <span class="mini-time"></span></div><img class="mini-target" src="${img}" draggable="false" style="width:${size}px">`;
       document.body.appendChild(ov);
       const tg = ov.querySelector('.mini-target');
@@ -175,7 +177,7 @@
   function typeGame({ word, time = 4, title = 'DIGITE RÁPIDO!' }) {
     VN.hide();
     return new Promise(res => {
-      const ov = document.createElement('div'); ov.className = 'mini';
+      const ov = document.createElement('div'); ov.className = 'mg-overlay';
       ov.innerHTML = `<div class="mini-type"><div class="mini-head"><b>${title}</b> <span class="mini-time"></span></div><div class="mini-word">${[...word].map(c => `<span>${c}</span>`).join('')}</div><input class="mini-in" maxlength="${word.length + 4}" autocomplete="off" spellcheck="false"></div>`;
       document.body.appendChild(ov);
       const inp = ov.querySelector('.mini-in'); setTimeout(() => inp.focus(), 30);
@@ -198,7 +200,7 @@
   const narr = t => { VN.speaker = null; return VN.say('', t); };
   const choose = opts => VN.choose(opts);
   const addMoney = (v, why) => { GAME.addMoney(v, true); const g = G(); g.log.events = (g.log.events || 0) + v; };
-  const safeLoss = pct => { const g = G(); return Math.max(0, Math.min(Math.round(g.money * pct), 250 + g.day * 35, g.money - 1)); };
+  const safeLoss = pct => { const g = G(); const cap = mod('lossCap') > 0 ? Math.min(pct, mod('lossCap')) : pct; return Math.max(0, Math.min(Math.round(g.money * cap), 250 + g.day * 35, g.money - 1)); };
 
   // ---------- eventos do meio do expediente ----------
   const MID = [
@@ -408,18 +410,82 @@
       },
     },
     // brigas
-    { id: 'f_reclamacao', w: 1.4, fight: true, cond: g => g.day >= 2, run: async () => { const g = G(); const prev = (g.grudges || []).shift(); const c = prev ? CHARS.ROSTER.find(x => x.id === prev.id) || pick(CHARS.ROSTER) : pick(CHARS.ROSTER); const r = await FIGHTS.run('reclamacao', { char: c, prev }); if (r.redo) await GAME.warrantyRepair(c, prev); } },
-    { id: 'f_barraco', w: .8, fight: true, cond: g => g.day >= 2, run: async () => { await FIGHTS.run('barraco'); } },
-    { id: 'f_karen', w: .7, fight: true, cond: g => g.day >= 3, run: async () => { await FIGHTS.run('karen'); } },
+    { id: 'f_reclamacao', w: 1.8, fight: true, cond: g => g.day >= 2, run: async () => { const g = G(); const prev = (g.grudges || []).shift(); const c = prev ? CHARS.ROSTER.find(x => x.id === prev.id) || pick(CHARS.ROSTER) : pick(CHARS.ROSTER); const r = await FIGHTS.run('reclamacao', { char: c, prev }); if (r.redo) await GAME.warrantyRepair(c, prev); } },
+    { id: 'f_barraco', w: 1.0, fight: true, cond: g => g.day >= 2, run: async () => { await FIGHTS.run('barraco'); } },
+    { id: 'f_karen', w: 1.0, fight: true, cond: g => g.day >= 3, run: async () => { await FIGHTS.run('karen'); } },
+    // ---- v1.4: mais brigas e conversas digitando ----
+    { id: 'f_rival', w: 1.3, fight: true, cond: g => window.RIVAL && RIVAL.active(), run: async () => { await FIGHTS.run('rival'); } },
+    { id: 'f_golpista', w: 1.0, fight: true, cond: g => g.day >= 3 && !g.stolenPhone, run: async () => { await FIGHTS.run('golpista'); } },
+    { id: 'f_casal', w: 1.1, fight: true, cond: g => g.day >= 2, run: async () => { await FIGHTS.run('casal'); } },
+    { id: 'f_crianca', w: 1.0, fight: true, run: async () => { await FIGHTS.run('crianca'); } },
+    { id: 'f_jornalista', w: .9, fight: true, cond: g => window.RIVAL && RIVAL.active() && (g.lastPress || 0) + 4 <= g.day, run: async () => { G().lastPress = G().day; await FIGHTS.run('jornalista'); } },
+    { id: 'f_fornecedor', w: .6, fight: true, cond: g => window.RIVAL && RIVAL.active() && g.day >= 5, run: async () => { await FIGHTS.run('fornecedor'); } },
+    {
+      id: 'hacker', w: .8, run: async () => {
+        const g = G(); AUDIO.sfx('glitch'); UI.glitch();
+        await narr('💻 O computador da loja travou com uma tela vermelha: <b>"SEUS ARQUIVOS FORAM SEQUESTRADOS"</b>. Digite os comandos rápido pra salvar os dados!');
+        const words = pick([['ANTIVIRUS', 'BACKUP', 'REINICIAR'], ['DESCONECTAR', 'LIMPAR', 'SENHA'], ['FIREWALL', 'ESCANEAR', 'APAGAR']]);
+        let ok = true;
+        for (const w of words) { if (!await typeGame({ word: w, time: 3.2 + w.length * .12, title: `💻 COMANDO ${words.indexOf(w) + 1}/3` })) { ok = false; break; } }
+        if (ok) { await GAME.gainXP(25); AUDIO.sfx('victory'); await narr('Vírus eliminado! Você salvou a agenda de clientes. (+25 XP)'); }
+        else { const v = safeLoss(.08); addMoney(-v); GAME.repChange(-.1); await narr(`O vírus apagou metade da agenda. Você pagou <b style="color:#c1121f">${money(v)}</b> pra um técnico de informática recuperar o resto.`); }
+      },
+    },
+    {
+      id: 'senha', w: .8, run: async () => {
+        const c = pick(CHARS.ROSTER); const code = String(1000 + ((Math.random() * 9000) | 0)) + String((Math.random() * 10) | 0);
+        const sp = await SHOP.showCustomer(c); VN.speaker = sp;
+        await VN.say(c.name, `Socorro! Esqueci a senha do meu celular! Minha filha anotou aqui... é <b>${code.split('').join(' ')}</b>! Digita pra mim, rápido, que vai bloquear!`, { expr: 'worried' });
+        const ok = await typeGame({ word: code, time: 4, title: '🔒 DIGITE A SENHA!' });
+        VN.speaker = sp;
+        if (ok) { const v = r5(20 + G().day * 2); addMoney(v); await VN.say(c.name, `Destravou! Obrigada! Toma ${money(v)} pelo favor!`, { expr: 'happy' }); }
+        else await VN.say(c.name, 'Bloqueou por 1 hora... tudo bem, eu espero. Snif.', { expr: 'sad' });
+        VN.hide(); await SHOP.leaveCustomer(1);
+      },
+    },
+    {
+      id: 'ditado', w: .7, run: async () => {
+        const code = pick(['BAT-7X2', 'LCD-44K', 'USB-C9', 'CHIP-3A', 'CAM-12M']);
+        await narr(`📞 O Seu Toninho liga: <i>"Promoção pros 3 primeiros que me passarem o código da peça! Anota aí: <b>${code}</b>!"</i>`);
+        const ok = await typeGame({ word: code, time: 4.5, title: '📞 DITE O CÓDIGO!' });
+        if (ok) { const a = GAME.giftPart(), b = GAME.giftPart(); AUDIO.sfx('eventGood'); await narr(`Você foi o primeiro! Ganhou: ${a} e ${b}.`); }
+        else await narr('"Ih, já acabou, rapaz." Fica pra próxima.');
+      },
+    },
+    {
+      id: 'cliente_consertaja', w: 1.0, cond: g => window.RIVAL && RIVAL.active(), run: async () => {
+        const c = pick(CHARS.ROSTER); const sp = await SHOP.showCustomer(c); VN.speaker = sp;
+        await VN.say(c.name, 'Fui na ConsertaJá do outro lado da rua... trocaram a tela e em dois dias parou tudo! Olha isso!', { expr: 'angry' });
+        const ch = await choose([{ label: '💝 Arrumar de graça pra conquistar o cliente', sub: '+bairro, +reputação', value: 'gratis' }, { label: '💰 Cobrar o conserto normal', sub: `+${money(r5(90 + G().day * 8))}`, value: 'cobra' }, { label: '🔎 Examinar a peça que eles usaram', sub: 'pode virar prova', value: 'exam' }]);
+        VN.speaker = sp;
+        if (ch === 'gratis') { RIVAL.share(.05); GAME.repChange(.25); await VN.say(c.name, 'De graça?! Nunca mais piso naquela ConsertaJá! Vou contar pra todo mundo!', { expr: 'happy' }); }
+        else if (ch === 'cobra') { const v = r5(90 + G().day * 8); addMoney(v); RIVAL.share(.02); await VN.say(c.name, 'Pelo menos aqui funciona. Tá pago!', { expr: 'smile' }); }
+        else {
+          if (RIVAL.state().ch4 && Math.random() < .65) { RIVAL.evidence(1, `A tela que a ConsertaJá colocou no aparelho de ${c.name} era falsificada, com etiqueta de original.`); await VN.say(c.name, 'Falsificada?! Eu paguei por original! Pode usar isso contra eles!', { expr: 'angry' }); }
+          else await VN.say(c.name, 'Hmm, e aí? Não achou nada? Tá bom... valeu por olhar.', { expr: 'neutral' });
+        }
+        VN.hide(); await SHOP.leaveCustomer(1);
+      },
+    },
+    {
+      id: 'candidato', w: .5, cond: g => window.TEAM && !TEAM.hired && g.story && g.story.seen.includes('reforcos'), run: async () => {
+        const id = pick(['leo', 'rafa', 'nina']); const ch = CHARS.ROSTER.find(x => x.id === id);
+        const sp = await SHOP.showCustomer(ch); VN.speaker = sp;
+        await VN.say(ch.name, 'Oi! Ainda tá precisando de ajudante? Eu topo!', { expr: 'smile' });
+        const c = await choose([{ label: `Contratar ${ch.name}`, value: 'sim' }, { label: 'Agora não', value: 'nao' }]);
+        if (c === 'sim') { TEAM.hire(id); await VN.say(ch.name, 'Uhuul! Amanhã cedo tô aqui!', { expr: 'happy' }); }
+        VN.hide(); await SHOP.leaveCustomer(1);
+      },
+    },
   ];
 
   async function midday() {
     const g = G();
     if (!g || g.dead) return false;
     g.eventsToday = g.eventsToday || 0;
-    if (g.eventsToday >= 2 || g.day < 1) return false;
+    if (g.eventsToday >= 3 || g.day < 1) return false;
     const fm = (g.event && g.event.fightMult) || 1;
-    let chance = .34 + Math.min(.1, g.day * .005);
+    let chance = .5 + Math.min(.12, g.day * .006);
     if (Math.random() > chance) return false;
     const pool = MID.filter(e => !e.cond || e.cond(g));
     const w = e => e.w * (e.fight ? fm * (g.rep < 2 ? 1.4 : 1) * ((g.grudges || []).length && e.id === 'f_reclamacao' ? 2.5 : 1) : 1);
@@ -464,5 +530,20 @@
     await ev.run(); VN.hide(); META.bump('events'); GAME.refreshHUD();
   }
 
-  window.EVENTS = { DAILY, rollDaily, newspaper, midday, night, runEvent, MID, NIGHT, review, contractProgress, contractsEndDay, contractDevice, catchGame, typeGame, prop, clearProps };
+
+  // manhã: consequências de coisas feitas ontem (celular suspeito)
+  async function morning() {
+    const g = G(); const out = [];
+    if (g.stolenPhone && g.stolenPhone.day < g.day) {
+      const sp = g.stolenPhone; g.stolenPhone = null;
+      if (Math.random() < .45) {
+        const fine = r5(250 + g.day * 10); const v = Math.min(fine, Math.max(0, g.money - 1)); GAME.addMoney(-v, true); g.log.events -= v; GAME.repChange(-.6);
+        out.push(`🚓 A polícia apareceu atrás do celular roubado que você comprou! Multa de <b style="color:#c1121f">${money(v)}</b> e −0,6★.`);
+      } else { const v = r5(sp.paid * (1.8 + Math.random())); GAME.addMoney(v, true); g.log.events += v; out.push(`📱 Você revendeu o celular "misterioso" por <b>${money(v)}</b>. Ninguém fez perguntas... dessa vez.`); }
+    }
+    if (g.partsShock > 0) g.partsShock--;
+    return out;
+  }
+
+  window.EVENTS = { morning, DAILY, rollDaily, newspaper, midday, night, runEvent, MID, NIGHT, review, contractProgress, contractsEndDay, contractDevice, catchGame, typeGame, prop, clearProps };
 })();

@@ -68,7 +68,7 @@
   function st() { const g = G(); if (!g.decor) g.decor = { owned: [], placed: {}, broken: [], petDay: 0 }; return g.decor; }
   function placedIds() { if (!G()) return []; return Object.values(st().placed).filter(Boolean); }
   function active() { const s = st(); return placedIds().filter(id => !s.broken.includes(id)); }
-  function style() { return active().reduce((a, id) => a + DEC[id].style, 0); }
+  function style() { return Math.round(active().reduce((a, id) => a + DEC[id].style, 0) * (1 + (G() && G().upgrades ? META.UPGRADES.filter(u => G().upgrades.includes(u.id)).reduce((a, u) => a + (u.mods.styleMult || 0), 0) : 0))); }
   function tier() { const s = style(); let t = null; for (const x of STYLE_TIERS) if (s >= x.min) t = x; return t; }
 
   // modificadores somados em META.mod
@@ -253,7 +253,7 @@
   const FORTUNES = ['A sorte sorri para quem aposta... no vermelho.', 'Um cliente de cabelo colorido trará alegria.', 'Hoje, cuidado com a cola da tela.', 'O número 7 vai aparecer quando você menos esperar.', 'Alguém vai tentar te passar a perna. Fique esperto.', 'Uma moeda perdida vai voltar pra você.', 'Não confie em quem diz "é rapidinho".', 'O trevo dourado está mais perto do que você imagina.', 'Hoje a lua favorece os caça-níqueis.', 'Um bichinho vai te trazer sorte.', 'Paciência: a raiva de um cliente passa com um cafezinho.', 'Os astros dizem: poupar hoje, sorrir amanhã.'];
   function morning() {
     const out = [];
-    const inc = modSum('dailyIncome'); if (inc > 0) { GAME.addMoney(inc, true); if (G().log) G().log.events += inc; out.push(`🥤 Máquina de refrigerante rendeu <b>${UI.money(inc)}</b>`); }
+    const inc = META.mod('dailyIncome'); if (inc > 0) { GAME.addMoney(inc, true); if (G().log) G().log.events += inc; out.push(`🥤 Máquina de refrigerante rendeu <b>${UI.money(inc)}</b>`); }
     if (modSum('fortune') > 0) out.push(`🔮 Zoltar diz: <i>"${pick(FORTUNES)}"</i>`);
     return out;
   }

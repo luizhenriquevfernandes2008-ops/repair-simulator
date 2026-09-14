@@ -63,11 +63,12 @@
     askPrice: R('quanto|qual (o )?valor|qual (o )?preco|quanto custa|quanto voce quer'),
     askHow: R('como (voce )?(esta|vai|anda)|tudo bem com voce|td bem|tudo bom|como foi seu dia'),
     dismiss: R('ah (claro|ta)|com certeza ne|parabens|grande coisa|e dai|tanto faz|problema (e )?seu|azar o seu|azar seu|nao to nem ai|nem ai|dane-se|dane se|foda-se|foda se|sei la|whatever|chora|chora mais|mimimi|aceita que doi menos|supera|se vira'),
-    fair: R('ordem de chegada|quem chegou primeiro|chegou primeiro|senha|fila|um de cada vez|cada um na sua vez|vez dele|vez dela|par ou impar|sorteio|os dois|ambos|atendo (os )?dois|justo para os dois|metade para cada|voces dois|nenhum dos dois|os dois juntos|um por vez|pedra papel'),
+    fair: R('ordem de chegada|quem chegou primeiro|chegou primeiro|senha|fila|um de cada vez|cada um na sua vez|vez dele|vez dela|par ou impar|sorteio|os dois|ambos|atendo (os )?dois|justo para os dois|metade para cada|voces dois|nenhum dos dois|os dois juntos|um por vez|pedra papel|acidente|ninguem tem culpa|nao importa (de quem|quem)|divid\w*|meio a meio|voces se amam|casal lindo|nao briguem|sem briga'),
     pay: R('pago|pagar|toma|tome|aqui esta|aqui ta|te pago|vou pagar|eu pago|quito|quitar|acerto|acertar'),
     delay: R('prazo|amanha|semana que vem|mais (uns )?dias|depois|mes que vem|parcel\\w*|espera (um pouco|ai)|me da um tempo|mais tempo|adiar|adia|outro dia'),
     bribe: R('propina|por fora|cafezinho|acerto (por fora|entre nos)|agrado|molhar a mao|um trocado|jeitinho|dar um jeito|te dou um dinheiro|fica com isso'),
     goodbye: R('tchau|adeus|ate mais|ate logo|falou|flw|fui|bye'),
+    pride: R('minha loja|meus clientes|nossa loja|tradicao|tia neide|clientes fieis|freguesia|melhor servico|melhor do bairro|trabalho honesto|peca original|pecas originais|qualidade|anos de experiencia|o bairro confia|a gente e melhor|somos melhores|confiam em mim'),
     manager: R('sou o gerente|eu sou o gerente|o gerente sou eu|sou o dono|eu sou o dono|o dono sou eu|eu que mando aqui|eu sou o responsavel|sou o responsavel'),
     thanks: R('obrigad\\w*|valeu|grato|grata|agradeco'),
     yell: R('!{2,}'),
@@ -94,7 +95,7 @@
     if (out.money === null) { for (const [w, v] of Object.entries(NUMW)) if (new RegExp(`(^| )${w} (reais|real|conto|pila)`).test(s)) out.money = v; }
     if (/(^| )metade( |$)/.test(s)) out.pct = Math.max(out.pct || 0, 50);
     if (/(^| )(o dobro|dobro)( |$)/.test(s)) out.pct = out.pct || 0;
-    if (out.pct === null && out.money === null) { m = s.match(/(^| )(\d{1,4})( |$)/); if (m) out.bare = +m[2]; }
+    if (out.pct === null && out.money === null) { m = s.match(/(^| )(\d{1,5})(?= |$)(?! (dias?|anos?|mes|meses|horas?|minutos?|min|vezes|semanas?|gb|mah|pecas?|parafusos?|clientes?|anos))/); if (m) out.bare = +m[2]; }
     return out;
   }
   function gibberish(tokens, s) {
@@ -283,7 +284,7 @@
   // ---------- mente de um personagem ----------
   function create(npc, sc) {
     const p = Object.assign({}, PERS[npc.id] || P('mano', .5, .5, .5));
-    const temper = p.temper, calmMod = (window.GAME && GAME.mod('calm')) || 0;
+    const temper = p.temper, calmMod = (window.GAME && (GAME.mod('calm') + GAME.mod('fightFirst'))) || 0;
     const m = {
       npc, p, v: VOICE[p.voice] || VOICE.mano, sc,
       anger: clamp(Math.round(sc.anger0 + temper * 18 - calmMod), 20, 95), trust: 35, turn: 0, maxTurns: sc.maxTurns || 7,
@@ -300,7 +301,7 @@
   function flavor(m, txt) {
     if (Math.random() < .45) txt = pick(m.v.pre) + ' ' + (/^[A-ZÀ-Ú][a-zà-ú]/.test(txt) ? txt.charAt(0).toLowerCase() + txt.slice(1) : txt);
     if (Math.random() < .35) { const s = pick(m.v.suf); if (s) txt = /^[.~]/.test(s) ? txt.replace(/[.!?~]+$/, '') + s : txt.replace(/[.!?~]*$/, m => m || '.') + s; }
-    if (Math.random() < .12 && m.v.addr) txt = txt.replace(/([^.!?~\s])([.!?~]+)(\s|$)/, `$1, ${m.v.addr}$2$3`);
+    if (Math.random() < .12 && m.v.addr) txt = txt.replace(/^([^.!?~]{14,}?[^.!?~\s])([.!?~]+)(\s|$)/, `$1, ${m.v.addr}$2$3`);
     return txt;
   }
   function reflectText(raw) {
@@ -326,6 +327,7 @@
     const r = analyze(raw, ctx.names || []);
     const h = r.hits, p = m.p, sc = m.sc;
     m.turn++;
+    if (CUSTOM[sc.kind]) return CUSTOM[sc.kind](m, r, ctx);
     let d = 0, text = null, expr = null, trustD = 0;
     const seen = k => (m.seen[k] = (m.seen[k] || 0) + 1) - 1; // quantas vezes já usou
     const dim = k => Math.pow(.55, seen(k));                   // retorno decrescente
@@ -395,7 +397,7 @@
           else { m.counter = { type: sc.demand === 'refund' ? 'refund' : 'discount', pct: c }; d -= 8; add(say(m, T.discCounter, { pct, cpct: c })); }
         } else { d += 6 * (1 + p.pride); add(say(m, T.discLow, { pct })); }
       }
-      if (h.redo && !m.deal && sc.kind !== 'fiscal' && sc.kind !== 'agiota' && sc.kind !== 'fila' && sc.kind !== 'barraco') {
+      if (h.redo && !m.deal && ['reclamacao', 'calote', 'karen'].includes(sc.kind)) {
         if (sc.demand === 'redo' || m.trust >= 55) m.deal = { type: 'redo' };
         else { d -= 10 * dim('redo'); add(say(m, T.redoMeh)); }
       }
@@ -404,6 +406,7 @@
       if (h.refuse) { d += 12; add(say(m, T.refuse)); expr = 'angry'; }
 
       // ---- aproximação ----
+      if (h.pride && !h.insult) { if (sc.kind === 'rival') { d -= 13 * dim('pride'); trustD += 4; add(pick(['Hmpf. Tradição não paga as contas, amigo.', 'Qualidade? Hah. Vamos ver quem sobra no fim do mês.', 'Clientes fiéis... por enquanto.', 'Tá confiante, hein? Gosto disso. Vai doer mais quando perder.'])); expr = 'smug'; } else d -= 3 * dim('pride'); }
       if (h.manager && !h.insult) {
         if ((sc.kind === 'karen' || /gerente/.test(sc.demandTxt || '')) && !seen('manager')) { d -= 24; trustD += 12; add(pick(['Ah! Finalmente o GERENTE. Agora sim vamos conversar direito.', 'O gerente em pessoa? Hm. Muito bem, assim eu gosto.'])); expr = 'smug'; }
         else if (!lines.length) add(pick(['Ah, você é o dono? Então a culpa é sua mesmo!', 'Dono, é? Pois então resolve!']));
@@ -508,6 +511,7 @@
     m.lastExpr = expr;
     let text2 = lines.slice(0, 2).join(' ');
     if (!m.outcome || m.outcome === 'deal') text2 = flavor(m, text2);
+    text2 = text2.charAt(0).toUpperCase() + text2.slice(1);
     return { text: text2, expr, delta: d, outcome: m.outcome, deal: m.deal, analysis: r };
   }
 
@@ -531,7 +535,7 @@
     const sidePhrase = /(voce|voce primeiro|sua vez|seu primeiro|primeiro voce|pode vir|vem voce|atendo voce|primeiro)/.test(r.s);
     if (h.fair && !h.insult) {
       const k = (g.fairN = (g.fairN || 0) + 1);
-      const orderTalk = /(chegada|chegou primeiro|quem chegou|senha|fila|um de cada vez|um por vez|vez de cada)/.test(r.s);
+      const orderTalk = g.sc.kind === 'fila' && /(chegada|chegou primeiro|quem chegou|senha|fila|um de cada vez|um por vez|vez de cada)/.test(r.s);
       for (const m of g.minds) {
         let d = -18 / k;
         if (orderTalk) d += m.npc.id === first ? -14 : -4;
@@ -573,5 +577,135 @@
     return { lines: out, outcome, analysis: r };
   }
 
-  window.BRAIN = { analyze, create, respond, respondGroup, norm, PERS, VOICE, mood };
+  // ---------- personagens da história ----------
+  Object.assign(PERS, {
+    neide: P('vovo', .3, .8, .1), vitor: P('rival', .95, .4, .6, { formal: true }), olga: P('dama', .8, .4, .3, { formal: true }),
+    beto: P('mano', .2, .6, .4), zeesperto: P('malandro', .3, .7, .4), juninho: P('crianca', .1, .95, .3, { likes: ['games', 'animal', 'comida'] }),
+    marcela: P('patricinha', .6, .5, .6), rodrigo: P('mano', .6, .6, .6, { likes: ['futebol'] }), cris: P('jornalista', .5, .5, .2),
+    toninho: P('tiozao', .5, .7, .3, { likes: ['futebol', 'comida'] }),
+    aurelio: P('executivo', .7, .3, .4, { formal: true }), cleo: P('patricinha', .8, .6, .5, { flirt: 'flatter' }), monteiro: P('executivo', .9, .2, .5, { formal: true }), pixel: P('gamer', .6, .7, .4, { nerd: true }),
+  });
+  Object.assign(VOICE, {
+    rival: { pre: ['Olha só,', 'Querido,', 'Veja bem,', 'Hah.'], suf: [' A ConsertaJá agradece.', '', ' Pensa nisso.', ' Negócios são negócios.'], addr: 'amigo' },
+    dama: { pre: ['Meu jovem,', 'Pois bem,', 'Hum.', 'Querido,'], suf: ['', ' Continue.', ' Estou ouvindo.'], addr: 'meu jovem' },
+    malandro: { pre: ['Ô patrão,', 'Chefia,', 'Psiu,', 'Olha,'], suf: [' Negócio da China!', '', ' Tá ligado?'], addr: 'patrão' },
+    crianca: { pre: ['Snif...', 'Moço,', 'Buááá...', 'Hmm...'], suf: [' Snif.', '', ' Né?'], addr: 'moço' },
+    jornalista: { pre: ['Interessante.', 'Certo.', 'Anotado.', 'Hmm.'], suf: ['', ' Próxima pergunta.', ''], addr: 'senhor' },
+  });
+
+  // ---------- modos especiais (golpista, jornalista, discurso no leilão) ----------
+  const pickU = (m, arr) => { const o = arr.filter(x => !m.used.has(x)); const t = pick(o.length ? o : arr); m.used.add(t); return t; };
+  const Q_JORNAL = ['Por que o bairro deveria escolher a sua loja e não a ConsertaJá?', 'Dizem que a concorrência é mais barata. O que você responde?', 'Qual o segredo de um bom conserto?', 'Uma mensagem final para os leitores da Gazeta?'];
+  const Q_OLGA = ['Então me diga: por que eu deveria vender este prédio a você?', 'E o que você vai fazer por este bairro, meu jovem?', 'Última pergunta: o que a Neide diria se estivesse vendo você agora?'];
+  const JUDGE_GOOD = R('bairro|cliente\\w*|comunidade|tradicao|qualidade|honest\\w*|garantia|preco justo|confianca|confiar|familia|tia neide|neide|respeito|cuidado|carinho|dedicacao|trabalho duro|trabalhar|sonho|futuro|juntos|ajudar|vizinh\\w*|emprego|aprendiz|ensinar|original|justo|verdade|coracao|amor|orgulho');
+  function judge(m, r, qs) {
+    const h = r.hits; let sc = 0; const notes = [];
+    const words = r.tokens.length;
+    if (r.empty || r.gib) { sc -= 12; notes.push(r.gib ? 'Isso não é uma resposta.' : 'Silêncio não convence ninguém.'); }
+    else {
+      if (words >= 8) sc += 6; if (words >= 16) sc += 5; if (words <= 3) { sc -= 6; notes.push('Curto demais.'); }
+      const good = (r.s.match(new RegExp(JUDGE_GOOD.source, 'g')) || []).length; sc += Math.min(18, good * 6);
+      if (h.promise) sc += 8; if (h.empathy) sc += 6; if (h.explain) sc += 5; if (h.pride) sc += 6; if (h.polite) sc += 3;
+      if (h.humor) sc += m.p.humor > .4 ? 5 : -2; if (h.compliment) sc += 3;
+      if (h.insult) { sc -= 25; notes.push('Ofender não é argumento.'); } if (h.threat) sc -= 18; if (h.dismiss) sc -= 12; if (r.caps) sc -= 6;
+      if (/vitor|consertaja|concorren/.test(r.s) && h.insult) sc -= 8;
+      if (h.bribe) { sc -= 30; notes.push('Está tentando me comprar?!'); }
+    }
+    m.score = Math.max(0, Math.min(100, (m.score || 40) + sc));
+    m.anger = 100 - m.score;
+    return { sc, notes };
+  }
+  const CUSTOM = {
+    jornalista(m, r) {
+      const { sc, notes } = judge(m, r);
+      const react = sc >= 14 ? pickU(m, ['Ótima resposta! Isso vai para a manchete.', 'Uau. Os leitores vão adorar.', 'Isso sim é resposta de quem entende do assunto.']) : sc >= 5 ? pick(['Hm, boa.', 'Certo, faz sentido.', 'Ok, anotei.']) : pickU(m, ['Hmm... não sei se isso convence.', 'Isso vai soar estranho no jornal...', 'Os leitores esperavam mais.']);
+      const q = Q_JORNAL[m.turn];
+      if (!q) m.outcome = m.score >= 60 ? 'calm' : m.score >= 35 ? 'deal' : 'leave';
+      const txt = [notes[0], react, q || (m.outcome === 'calm' ? 'Obrigada! Vai ser capa amanhã!' : m.outcome === 'deal' ? 'Certo, obrigada. Sai numa notinha amanhã.' : 'Tá... obrigada pelo seu tempo.')].filter(Boolean).join(' ');
+      m.deal = m.outcome === 'deal' ? { type: 'meh' } : null;
+      return { text: txt, expr: sc >= 5 ? 'smile' : 'worried', delta: -sc, outcome: m.outcome, deal: m.deal, analysis: r };
+    },
+    olga(m, r) {
+      const { sc, notes } = judge(m, r);
+      const react = sc >= 14 ? pickU(m, ['Hum! Gostei disso.', 'Isso me tocou, meu jovem.', 'Palavras bonitas... e parecem sinceras.']) : sc >= 5 ? pick(['Hum, razoável.', 'Continue.', 'Entendo.']) : pickU(m, ['Hum... o Vitor falou melhor.', 'Isso não me convence.', 'Esperava mais de um sobrinho da Neide.']);
+      const q = Q_OLGA[m.turn];
+      if (!q) m.outcome = 'calm';
+      const txt = [notes[0], react, q || 'Obrigada. Já ouvi o suficiente.'].filter(Boolean).join(' ');
+      return { text: txt, expr: sc >= 5 ? 'smile' : 'worried', delta: -sc, outcome: m.outcome, deal: null, analysis: r };
+    },
+    golpista(m, r) {
+      const h = r.hits; let d = 0; const out = []; let expr = 'smug';
+      const asks = /(de onde|origem|roubad\w*|furtad\w*|nota fiscal|nota|caixa|documento|quem e o dono|e seu|e teu|bloquead\w*|imei|policia|delegacia|procedencia|achou onde|pegou onde)/.test(r.s);
+      const buy = /(compro|vou comprar|fechado|fechou|aceito|me da|passa pra ca|quero|negocio fechado|pode ser)/.test(r.s) && !/(nao (compro|quero|aceito)|nem pensar)/.test(r.s);
+      if (h.threat || /policia|delegacia|190/.test(r.s)) { m.outcome = 'leave'; out.push(pick(['Polícia?! Opa, lembrei que deixei o feijão no fogo! FUI!', 'Calma, calma! Nem tô aqui! Tchau!'])); expr = 'surprised'; }
+      else if (h.insult) { m.outcome = 'calm'; out.push('Grosso! Vou vender pro vizinho então. Hunf!'); expr = 'angry'; }
+      else if (buy && !m.suspicious) { m.outcome = 'deal'; m.deal = { type: 'buy' }; out.push(pick(['Aí sim, patrão! Negócio fechado! Esse é garantido... eu acho.', 'Isso! Pagou, levou! Foi um prazer!'])); expr = 'happy'; }
+      else if (buy && m.suspicious) { m.outcome = 'deal'; m.deal = { type: 'buy' }; out.push('Hehe... sabia que você era esperto. Pega logo antes que alguém veja.'); }
+      else if (asks) {
+        d += 22; m.suspicious = true;
+        out.push(m.anger + d >= 80 ? pickU(m, ['T-tá bom! Foi um cara com camisa da ConsertaJá que me passou! Eu só revendo! Não me entrega!', 'Ok, ok! Veio de um tal de Beto, da ConsertaJá. Satisfeito?!']) : pickU(m, ['De onde veio? Ah... de... de uma herança. Da minha tia. Que morreu. Semana passada.', 'Nota fiscal? Hehe... a nota tá... na minha outra calça.', 'Roubado? Imagina! Achei. Quer dizer, comprei. Na feira.', 'IMEI? Que palavra difícil, patrão...']));
+        if (m.anger + d >= 80) m.snitched = true;
+        expr = 'worried';
+      }
+      else if (h.disagree || h.refuse || /(nao quero|nao compro|tira isso|some|vai embora|sai daqui|nao obrigado)/.test(r.s)) { m.outcome = 'calm'; out.push(pick(['Tá bom, tá bom... perdeu uma pechincha!', 'Hunf. Vou oferecer na ConsertaJá, lá eles compram tudo.'])); expr = 'sad'; }
+      else if (h.askPrice || r.num.money !== null) { out.push(`Pra você? ${UI.money(m.sc.base)}. Um iFone desses vale 2 mil na loja!`); d -= 5; }
+      else out.push(pickU(m, ['Vai, patrão, é novinho! Só tem uns arranhõezinhos... de fábrica.', 'Pensa bem: você arruma, revende e lucra! Genial, né?', 'Olha que beleza. Tá até quentinho ainda.', 'Oferta por tempo limitado! Tipo, os próximos 5 minutos.']));
+      m.anger = clamp(m.anger + d, 0, 100);
+      if (!m.outcome && m.turn >= m.maxTurns) { m.outcome = 'calm'; out.push('Cansei, vou embora. Última chance perdida!'); }
+      return { text: flavor(m, out.join(' ')), expr, delta: d, outcome: m.outcome, deal: m.deal, analysis: r };
+    },
+  };
+
+  // ---------- NEGOCIAÇÃO DE PREÇO DIGITANDO ----------
+  // O cliente oferece um valor; você pede mais. Ele tem um limite secreto que sobe com bons argumentos.
+  const HT = {
+    accept: ['Tá bom, {v}. Fechado!', '{v}? ...Tá, tá. Fechado. Mas capricha!', 'Hmm... ok, {v}. Negócio fechado.', 'Fechado em {v}! Aperta aqui.'],
+    counter: ['{v} é muito. Faço {c}.', 'Nem {v}, nem o meu. {c} e fechamos.', 'Hmm... {c}. Minha última oferta. Talvez.', 'Que tal {c}? É o que dá pra fazer.'],
+    crazy: ['{v}?! Tá maluco? Com isso eu compro um novo!', 'Hahaha, {v}! Boa piada. Agora fala sério.', '{v}?! Nem se viesse com uma pizza junto!'],
+    persuade: ['Hm... é, faz sentido. Posso pagar um pouquinho mais.', 'Tá, tá, você me convenceu que vale mais.', 'Peça original? Aí muda tudo...'],
+    low: ['Ué, {v}? Menos do que eu ofereci? Fechado, então!', 'Opa, {v}! Mais barato ainda? Aceito na hora!'],
+    noNumber: ['Tá, mas quanto você quer?', 'Fala um número, moço.', 'E o preço, fica quanto?'],
+    insult: ['Grosso assim eu não fecho negócio!', 'Com esse jeito? Vou procurar outra loja.'],
+    leave: ['Esquece. Vou na ConsertaJá.', 'Não dá. Tô indo embora.', 'Assim não tem acordo. Tchau.'],
+    final: ['Última oferta: {c}. Pega ou larga?', 'Olha, {c} é o máximo. Fechou?'],
+  };
+  function createHaggle(npc, price, opts = {}) {
+    const p = Object.assign({}, PERS[npc.id] || P('mano', .5, .5, .5));
+    const tol = Math.max(.08, .14 + (1 - (npc.haggle || .4)) * .32 + ((opts.rep || 2.5) - 2.5) * .03 + (opts.bonus || 0));
+    return { npc, p, v: VOICE[p.voice] || VOICE.mano, offer: price, base: price, max: Math.round(price * (1 + tol)), anger: 20 + (1 - (npc.patience || .6)) * 30, turn: 0, maxTurns: 6, persuaded: 0, outcome: null, price: null, used: new Set(), seen: {}, last: '', sc: { grievance: '', demandTxt: '' } };
+  }
+  function respondHaggle(hg, raw) {
+    const r = analyze(raw, []); const h = r.hits; hg.turn++;
+    const say2 = (bank, v) => { let o = bank.filter(x => !hg.used.has(x)); if (!o.length) o = bank; const t = pick(o); hg.used.add(t); return fill(t, v); };
+    const M = v => UI.money(v);
+    let ask = null;
+    if (r.num.money !== null) ask = r.num.money;
+    else if (r.num.pct !== null) ask = Math.round(hg.base * (1 + r.num.pct / 100));
+    else if (r.num.bare !== undefined && r.num.bare >= 15) ask = r.num.bare;
+    if (ask !== null && ask < hg.base * .5) ask = null; // número que não é preço
+    const lines = []; let expr = 'neutral';
+    if (h.insult) { hg.anger += 40; lines.push(say2(HT.insult)); expr = 'angry'; }
+    const argue = (h.explain || h.promise || h.pride || /(original|garantia|qualidade|rapido|urgente|experiencia|trabalho|dificil|complicad|peca cara|caro pra mim|capricho)/.test(r.s)) && !h.insult;
+    if (argue && hg.persuaded < 3) { hg.persuaded++; hg.max = Math.round(hg.max * 1.05); hg.anger -= 4; if (ask === null) lines.push(say2(HT.persuade)); expr = 'worried'; }
+    if ((h.humor && hg.p.humor > .5) || h.compliment) { hg.anger -= 6; if (ask === null && !lines.length) lines.push(pick(['Hehe, tá bom, tá bom.', 'Você é gente boa, hein.'])); }
+    const agreeNow = (h.agree || /(^| )(fechado|fechou|aceito|combinado|pode ser|esta bom|ta bom|ok|beleza)( |$)/.test(r.s)) && ask === null && !h.disagree;
+    if (agreeNow) { hg.outcome = 'deal'; hg.price = hg.offer; lines.push(say2(HT.accept, { v: M(hg.offer) })); expr = 'smile'; }
+    else if (ask !== null) {
+      if (ask <= hg.offer) { hg.outcome = 'deal'; hg.price = ask; lines.push(say2(HT.low, { v: M(ask) })); expr = 'happy'; }
+      else if (ask <= hg.max) {
+        const mid = (hg.offer + hg.max) / 2;
+        if (ask <= mid || hg.turn >= 3 || Math.random() < .35) { hg.outcome = 'deal'; hg.price = ask; lines.push(say2(HT.accept, { v: M(ask) })); expr = 'smile'; }
+        else { hg.offer = Math.max(hg.offer, Math.round((hg.offer + ask) / 2 / 5) * 5); hg.anger += 8; lines.push(say2(HT.counter, { v: M(ask), c: M(hg.offer) })); expr = 'worried'; }
+      } else if (ask <= hg.max * 1.3) { hg.offer = Math.max(hg.offer, Math.round(hg.max * .96 / 5) * 5); hg.anger += 14; lines.push(say2(HT.counter, { v: M(ask), c: M(hg.offer) })); expr = 'worried'; }
+      else { hg.anger += 26; lines.push(say2(HT.crazy, { v: M(ask) })); expr = 'angry'; }
+    } else if (!lines.length) { hg.anger += 4; lines.push(say2(HT.noNumber)); }
+    hg.anger = clamp(hg.anger, 0, 100);
+    if (!hg.outcome && (hg.anger >= 100 || h.threat)) { hg.outcome = 'leave'; lines.push(say2(HT.leave)); expr = 'angry'; }
+    else if (!hg.outcome && hg.turn >= hg.maxTurns) { hg.outcome = 'final'; lines.push(say2(HT.final, { c: M(hg.offer) })); }
+    let txt = lines.join(' ');
+    if (!hg.outcome || hg.outcome === 'final') txt = flavor(hg, txt);
+    return { text: txt, expr, outcome: hg.outcome, price: hg.price, offer: hg.offer, anger: hg.anger };
+  }
+
+  window.BRAIN = { analyze, create, respond, respondGroup, createHaggle, respondHaggle, norm, PERS, VOICE, mood };
 })();

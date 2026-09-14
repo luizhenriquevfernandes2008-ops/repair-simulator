@@ -17,17 +17,19 @@
   };
 
   // ---------- interface do chat ----------
-  let chatResolve = null;
-  function openChat(npcs, hints) {
-    const el = $('#chat');
-    el.innerHTML = `<div class="chat-top">${npcs.map(n => `<div class="chat-npc" data-id="${n.id}"><b>${n.name}</b><div class="anger"><div class="anger-fill"></div></div><span class="anger-emo">😠</span></div>`).join('')}</div>
+  let chatResolve = null, pendingSay = null;
+  let meterInvert = false;
+  function openChat(npcs, hints, opts = {}) {
+    const el = $('#chat'); meterInvert = !!opts.invert;
+    el.innerHTML = `<div class="chat-top">${opts.badge ? `<div class="chat-badge" id="chat-badge">${opts.badge}</div>` : ''}${npcs.map(n => `<div class="chat-npc" data-id="${n.id}"><b>${n.name}</b><small class="meter-lbl">${opts.meter || 'raiva'}</small><div class="anger"><div class="anger-fill"></div></div><span class="anger-emo">😠</span></div>`).join('')}</div>
       <div class="chat-log" id="chat-log"></div>
       <div class="chat-hints hidden" id="chat-hints">${hints.map(h => `<span>${h}</span>`).join('')}</div>
       <div class="chat-row"><input id="chat-in" maxlength="180" autocomplete="off" spellcheck="false" placeholder="Digite o que você vai dizer e aperte Enter..."><button id="chat-send" class="btn green">Enviar</button><button id="chat-hint" class="btn purple" title="Ideias de frases">💡</button></div>
-      <div class="chat-foot"><span id="chat-turns"></span><button id="chat-quit" class="mini-btn">Encerrar a conversa (o cliente vai embora bravo)</button></div>`;
+      <div class="chat-foot"><span id="chat-turns"></span><button id="chat-quit" class="mini-btn">${opts.quit || 'Encerrar a conversa (o cliente vai embora bravo)'}</button></div>`;
     el.classList.remove('hidden');
     const inp = $('#chat-in');
-    const send = () => { const v = inp.value.trim(); if (!chatResolve || inp.disabled) return; const r = chatResolve; chatResolve = null; inp.value = ''; r(v); };
+    pendingSay = null;
+    const send = () => { const v = inp.value.trim(); if (inp.disabled) return; if (!chatResolve) { if (v) { pendingSay = v; inp.value = ''; inp.disabled = true; } return; } const r = chatResolve; chatResolve = null; inp.value = ''; r(v); };
     inp.addEventListener('keydown', e => { e.stopPropagation(); if (e.key === 'Enter') { e.preventDefault(); send(); } else if (e.key.length === 1 || e.key === 'Backspace') AUDIO.sfx('key', { vol: .25, rate: .9 + Math.random() * .3 }); });
     $('#chat-send').onclick = send;
     $('#chat-hint').onclick = () => { $('#chat-hints').classList.toggle('hidden'); AUDIO.sfx('select'); };
@@ -36,7 +38,7 @@
     setTimeout(() => inp.focus(), 50);
   }
   function closeChat() { $('#chat').classList.add('hidden'); $('#chat').innerHTML = ''; chatResolve = null; }
-  function ask() { const inp = $('#chat-in'); inp.disabled = false; inp.focus(); return new Promise(r => { chatResolve = r; }); }
+  function ask() { const inp = $('#chat-in'); if (pendingSay !== null) { const v = pendingSay; pendingSay = null; return Promise.resolve(v); } inp.disabled = false; inp.focus(); return new Promise(r => { chatResolve = r; }); }
   function logLine(who, text, cls) {
     const log = $('#chat-log'); const d = document.createElement('div'); d.className = 'msg ' + cls;
     d.innerHTML = `<b>${who}</b><span></span>`; log.appendChild(d); log.scrollTop = log.scrollHeight;
@@ -58,7 +60,7 @@
   function setBars(minds) {
     for (const m of minds) {
       const box = document.querySelector(`.chat-npc[data-id="${m.npc.id}"]`); if (!box) continue;
-      const f = box.querySelector('.anger-fill'); f.style.width = m.anger + '%';
+      const f = box.querySelector('.anger-fill'); f.style.width = (meterInvert ? 100 - m.anger : m.anger) + '%';
       f.style.background = m.anger >= 70 ? 'linear-gradient(90deg,#e63946,#ff4d6d)' : m.anger >= 35 ? 'linear-gradient(90deg,#ffb703,#fb8500)' : 'linear-gradient(90deg,#52d68a,#9ef0b5)';
       box.querySelector('.anger-emo').textContent = m.anger >= 85 ? '🤬' : m.anger >= 65 ? '😡' : m.anger >= 45 ? '😠' : m.anger >= 25 ? '😒' : m.anger >= 10 ? '🙂' : '😊';
     }
@@ -137,6 +139,49 @@
     },
   };
 
+  Object.assign(HINTS, {
+    rival: ['Minha loja tem tradição, os clientes confiam em mim.', 'Qualidade não se compra, Vitor.', 'Pode vir, a gente se vê no fim do mês.', 'Aceita um cafezinho? Pra você ver como se atende bem.', 'Seu terno é bonito, pena que o serviço não é.', 'Sai da minha loja, por favor.'],
+    golpista: ['De onde veio esse celular?', 'Tem nota fiscal?', 'Não compro coisa roubada.', 'Vou chamar a polícia!', 'Quanto você quer?', 'Compro, fechado.'],
+    casal: ['Calma, os dois! Foi um acidente, ninguém tem culpa.', 'Vocês se amam, não briguem por um celular.', 'Divide o valor meio a meio!', 'Eu conserto e fica tudo bem.', 'Não importa de quem foi a culpa.', 'Aceitam um cafezinho?'],
+    crianca: ['Calma, campeão, eu vou consertar seu bichinho!', 'Não chora, quer uma bala?', 'Prometo que ele vai ficar novinho.', 'Que bichinho legal! Como ele se chama?', 'Kkk ele só tá dormindo, relaxa.', 'Você é muito corajoso, sabia?'],
+    jornalista: ['Nossa loja tem tradição de 40 anos no bairro, com peça original e garantia.', 'A gente cobra preço justo e trata cada cliente como família.', 'O segredo é cuidado, paciência e honestidade.', 'Obrigado a todos os vizinhos que confiam na gente!', 'A concorrência é boa pra todo mundo melhorar.', 'Venham tomar um café com a gente!'],
+    beto: ['Calma, Beto, pode confiar em mim.', 'Eu entendo, deve ser difícil trabalhar pro Vitor.', 'Prometo que ninguém vai saber que foi você.', 'Você é uma pessoa boa, dá pra ver.', 'Se precisar de emprego, minha loja tá de portas abertas.', 'Quer um café?'],
+    fornecedor: ['Seu Toninho, sou cliente fiel há anos, o senhor sabe.', 'Prometo pagar sempre em dia, palavra de honra.', 'Entendo que o Vitor paga mais, mas a gente tem história.', 'A Tia Neide sempre falou bem do senhor.', 'Aceita um cafezinho?', 'Vamos fazer um acordo justo pros dois.'],
+    olga: ['Esse prédio é a história do bairro e eu quero cuidar dele com carinho.', 'Vou manter a loja da Tia Neide aberta pros vizinhos, com preço justo.', 'Prometo contratar gente do bairro e ensinar o ofício.', 'A Neide diria que eu trabalhei duro e fui honesto.', 'Com todo respeito, a senhora merece alguém que ame esse lugar.', 'Não é só um negócio, é um sonho de família.'],
+  });
+  Object.assign(SC, {
+    rival() {
+      const why = pick(['Vim ver de perto a "concorrência". Fofo. Parece um museu.', 'Minha loja atendeu 40 clientes hoje. E você? Três?', 'Sabe que seus clientes estão indo pra mim, né?']);
+      return { kind: 'rival', anger0: 55, maxTurns: 6, base: 0, demand: 'respect', target: 0, grievance: 'essa sua lojinha atrapalha meus planos', demandTxt: 'que você aceite a derrota',
+        intro: [['Ora, ora... bom dia, "vizinho".', 'smug'], [why, 'smug']] };
+    },
+    golpista() {
+      const price = r5(150 + G().day * 6);
+      return { kind: 'golpista', anger0: 20, maxTurns: 6, base: price, demand: 'sell', target: 0, grievance: '', demandTxt: 'que você compre',
+        intro: [['Psiu, patrão... negócio da China aqui.', 'smug'], [`iFone "novinho", sem caixa, sem nota, sem perguntas. Só ${UI.money(price)}. Vai?`, 'smug']] };
+    },
+    crianca() {
+      return { kind: 'crianca', anger0: 62, maxTurns: 6, base: 0, demand: 'respect', target: 0, grievance: 'meu bichinho virtual morreu', demandTxt: 'que você salve o Pipoca',
+        intro: [['Buááá! O Pipoca MORREU!', 'sad'], ['É meu bichinho virtual... a tela apagou e ele não volta! BUÁÁÁ!', 'sad']] };
+    },
+    jornalista() {
+      return { kind: 'jornalista', anger0: 60, maxTurns: 4, base: 0, demand: 'judge', target: 0, grievance: '', demandTxt: '',
+        intro: [['Oi! Cris Notícia, da Gazeta do Bairro. Posso fazer umas perguntinhas?', 'smile'], ['A matéria é sobre a guerra das assistências técnicas. Vamos lá: por que o bairro deveria escolher a sua loja e não a ConsertaJá?', 'neutral']] };
+    },
+    beto() {
+      return { kind: 'beto', anger0: 64, maxTurns: 7, base: 0, demand: 'respect', target: 0, grievance: 'o Vitor me obriga a fazer coisas erradas', demandTxt: 'que eu possa confiar em você',
+        intro: [['P-psiu... sou o Beto, da ConsertaJá. Não conta pra ninguém que eu vim aqui.', 'worried'], ['O Vitor... ele manda a gente trocar peça original por falsificada. Eu tenho as notas. Mas tô com medo...', 'worried']] };
+    },
+    fornecedor() {
+      return { kind: 'fornecedor', anger0: 58, maxTurns: 6, base: 0, demand: 'respect', target: 0, grievance: 'o Vitor quer comprar todo o meu estoque de peças', demandTxt: 'um motivo pra eu não vender tudo pra ele',
+        intro: [['Rapaz... preciso te contar uma coisa chata.', 'worried'], ['O Vitor ofereceu o dobro por TODO o meu estoque de peças. Me dá um motivo pra eu não aceitar.', 'neutral']] };
+    },
+    olga() {
+      return { kind: 'olga', anger0: 60, maxTurns: 3, base: 0, demand: 'judge', target: 0, grievance: '', demandTxt: '',
+        intro: [['Muito bem. O Vitor já falou. Agora é a sua vez, meu jovem.', 'neutral'], ['Então me diga: por que eu deveria vender este prédio a você?', 'neutral']] };
+    },
+  });
+
   // ---------- executar uma briga ----------
   async function run(kind, arg = {}) {
     const g = G();
@@ -148,12 +193,15 @@
     else if (kind === 'barraco') { npcs = [NPCS.neusa]; sc = SC.barraco(); }
     else if (kind === 'fiscal') { npcs = [NPCS.fiscal]; sc = SC.fiscal(); }
     else if (kind === 'agiota') { npcs = [NPCS.jorjao]; sc = SC.agiota(arg.debt); }
+    else if (kind === 'casal') { npcs = [CHARS.STORY.marcela, CHARS.STORY.rodrigo]; sc = { kind: 'casal', anger0: 60, maxTurns: 7, base: 60, demand: 'first', target: 10, firstId: null, grievance: 'a culpa foi sua', demandTxt: 'que o outro admita a culpa' }; }
+    else if (SC[kind] && ['rival', 'golpista', 'crianca', 'jornalista', 'beto', 'fornecedor', 'olga'].includes(kind)) { const ids = { rival: 'vitor', golpista: 'zeesperto', crianca: 'juninho', jornalista: 'cris', beto: 'beto', fornecedor: 'toninho', olga: 'olga' }; npcs = [CHARS.STORY[ids[kind]]]; sc = SC[kind](); }
     else { npcs = [NPCS.regina]; sc = SC.karen(); kind = 'karen'; }
-    META.bump('fights');
+    if (kind !== 'olga' && kind !== 'jornalista') META.bump('fights');
 
     // personagens em cena
     let sprites = [];
-    if (npcs.length === 1) {
+    if (arg.sprites) sprites = arg.sprites;
+    else if (npcs.length === 1) {
       if (!arg.keepSprite || !SHOP.sprite) await SHOP.showCustomer(npcs[0]);
       sprites = [SHOP.sprite];
     } else {
@@ -167,7 +215,12 @@
 
     // introdução
     AUDIO.sfx('question');
-    if (kind === 'fila') {
+    if (kind === 'casal') {
+      const [A, B] = npcs;
+      VN.speaker = sprites[0]; await VN.say(A.name, 'Foi VOCÊ que deixou o celular cair na piscina!', { expr: 'angry' });
+      VN.speaker = sprites[1]; await VN.say(B.name, 'EU?! Você que jogou a boia em cima dele!', { expr: 'angry' });
+      VN.speaker = null; await VN.say('', `O casal <b>${A.name}</b> e <b>${B.name}</b> chegou brigando por causa do celular molhado. Acalme os dois digitando!`);
+    } else if (kind === 'fila') {
       const [A, B] = npcs; const first = npcs.find(n => n.id === sc.firstId), other = npcs.find(n => n.id !== sc.firstId);
       VN.speaker = sprites[0]; await VN.say(A.name, first === A ? 'Com licença, eu cheguei primeiro!' : 'Ei! Eu tava aqui antes de você!', { expr: 'angry' });
       VN.speaker = sprites[1]; await VN.say(B.name, first === B ? 'Mentira! Eu cheguei primeiro, todo mundo viu!' : 'Ah, é? Chegou nada! Furou a fila na cara dura!', { expr: 'angry' });
@@ -178,15 +231,17 @@
       VN.speaker = null;
     }
     VN.hide();
-    openChat(npcs, (kind === 'reclamacao' ? HINTS.base : HINTS[kind] || HINTS.base).map(h => h.replace('Aiko', (npcs.find(n => n.id === sc.firstId) || npcs[0]).name.split(' ').pop())));
+    const judgeKind = kind === 'jornalista' || kind === 'olga';
+    openChat(npcs, (kind === 'reclamacao' ? HINTS.base : HINTS[kind] || HINTS.base).map(h => h.replace('Aiko', (npcs.find(n => n.id === sc.firstId) || npcs[0]).name.split(' ').pop())), judgeKind ? { meter: 'impressão', invert: true, quit: 'Encerrar a conversa' } : kind === 'golpista' ? { meter: 'nervosismo', quit: 'Mandar ele embora' } : {});
+    if (judgeKind) minds.forEach(m => { m.score = 40; m.anger = 60; });
     setBars(minds); setTurns(0, sc.maxTurns);
-    await typeLine(sprites[0], npcs[0].name, sc.intro ? sc.intro[sc.intro.length - 1][0].replace(/<[^>]+>/g, '') : 'Resolve isso aí, moço! Quem vai ser atendido primeiro?');
+    await typeLine(sprites[0], npcs[0].name, sc.intro ? sc.intro[sc.intro.length - 1][0].replace(/<[^>]+>/g, '') : kind === 'casal' ? 'Fala pra ela que a culpa foi dela!' : 'Resolve isso aí, moço! Quem vai ser atendido primeiro?');
 
     let outcome = null, deal = null, turn = 0;
     const group = npcs.length > 1 ? { minds, sc } : null;
     while (!outcome) {
       const said = await ask();
-      if (said === null) { outcome = 'quit'; break; }
+      if (said === null) { outcome = kind === 'golpista' ? 'calm' : 'quit'; break; }
       $('#chat-in').disabled = true;
       logLine('Você', said || '...', 'me').textContent = said || '...';
       turn++; setTurns(turn, sc.maxTurns);
@@ -210,6 +265,7 @@
     await wait(.9);
     closeChat();
     const result = await consequences(kind, outcome, deal, { sc, npcs, sprites, minds, arg });
+    result.score = minds[0].score;
     return result;
   }
 
@@ -222,7 +278,7 @@
     if (win) { META.bump('fightsWon'); GAME.missionProgress('calm'); }
     if (outcome === 'quit') outcome = 'leave';
     const rep = v => GAME.repChange(v);
-    const leaveAll = async (dir = 1) => { if (npcs.length > 1) { for (const sp of sprites) SHOP.leaveExtra(sp, dir); await wait(.6); } else await SHOP.leaveCustomer(dir); };
+    const leaveAll = async (dir = 1) => { if (arg.sprites) return; if (npcs.length > 1) { for (const sp of sprites) SHOP.leaveExtra(sp, dir); await wait(.6); } else await SHOP.leaveCustomer(dir); };
 
     if (kind === 'reclamacao') {
       if (outcome === 'deal') {
@@ -272,15 +328,83 @@
         rep(-.3);
         await narr(`Os "sobrinhos" do Jorjão entraram na loja${d ? `, quebraram seu <b>${d.name}</b>` : ''} e levaram <b style="color:#c1121f">${UI.money(take)}</b> do caixa. A poupança, pelo menos, ficou a salvo.`);
       }
+    } else if (kind === 'casal') {
+      if (win) { rep(.2); g.vipNext = true; await narr('O casal fez as pazes e se abraçou no meio da loja! 💕 Eles vão deixar o celular com você e pagar bem.'); }
+      else if (outcome === 'explode') { UI.shake(); AUDIO.sfx('thud'); const d = window.DECOR ? DECOR.breakRandom() : null; rep(-.35); await narr(`O casal saiu brigando${d ? ` e derrubou o seu <b>${d.name}</b>` : ''}. Que climão.`); }
+      else { rep(-.15); await narr('Os dois foram embora ainda de cara feia.'); }
+      await leaveAll(); return res;
+    } else if (kind === 'rival') {
+      if (win) { RIVAL.share(.05); rep(.15); META.bump('rivalWins'); await say('Vitor Valadares', 'Hmpf... Tá bom, tá bom. Aproveita enquanto dura.', 'sad'); await narr('Os clientes que estavam na loja viram tudo. Ponto pra você! (+5% do bairro)'); }
+      else { RIVAL.share(-.05); rep(-.2); await say('Vitor Valadares', 'Hahaha! Gravei tudo. Vai bombar no grupo do bairro! Tchauzinho~', 'smug'); await narr('O Vitor saiu rindo. O vídeo da discussão circulou pelo bairro. (−5% do bairro)'); }
+    } else if (kind === 'golpista') {
+      if (outcome === 'deal') {
+        const v = Math.min(sc.base, Math.max(0, g.money - 1)); GAME.addMoney(-v, true); g.log.events -= v; g.stolenPhone = { paid: v, day: g.day };
+        await narr(`Você pagou ${UI.money(v)} pelo celular "misterioso". Amanhã dá pra revender... se ninguém vier atrás dele.`);
+      } else if (outcome === 'leave') { rep(.2); await narr('O golpista saiu correndo quando ouviu falar em polícia. O bairro agradece! (+reputação)'); }
+      else { rep(.1); await narr('Você recusou o negócio suspeito. O Zé Esperto foi embora resmungando.'); }
+      if (minds[0].snitched && window.RIVAL && RIVAL.active()) RIVAL.evidence(1, 'O Zé Esperto confessou que o celular veio de um funcionário da ConsertaJá.');
+    } else if (kind === 'crianca') {
+      if (win) { const v = r5(40 + g.day * 3); GAME.addMoney(v, true); g.log.events += v; rep(.15); await narr(`O Juninho parou de chorar e até riu! A mãe dele ficou tão agradecida que deu ${UI.money(v)} de gorjeta. 💛`); }
+      else { rep(-.15); await narr('O Juninho saiu chorando ainda mais alto. A mãe te olhou torto.'); }
+    } else if (kind === 'jornalista') {
+      const sc2 = minds[0].score;
+      if (sc2 >= 60) { RIVAL.share(.07); rep(.3); await narr(`📰 Amanhã a Gazeta publica: <b>"A assistência que tem coração"</b>. Impressão: ${sc2}/100. (+7% do bairro, +reputação)`); }
+      else if (sc2 >= 35) { RIVAL.share(.02); await narr(`📰 Saiu uma notinha simpática sobre a loja. Impressão: ${sc2}/100. (+2% do bairro)`); }
+      else { RIVAL.share(-.05); rep(-.15); await narr(`📰 A matéria saiu com o título <b>"Técnico perde a linha"</b>. Impressão: ${sc2}/100. (−5% do bairro)`); }
+    } else if (kind === 'beto') {
+      if (win) { RIVAL.evidence(2, 'O Beto te entregou cópias das notas fiscais falsas da ConsertaJá.'); rep(.1); await say('Beto', 'Toma. São as notas das peças falsificadas. Usa isso direito, tá? Obrigado por me ouvir.', 'smile'); }
+      else { await say('Beto', 'Esquece... eu não devia ter vindo. Não conta pra ninguém!', 'worried'); }
+    } else if (kind === 'fornecedor') {
+      if (win) { for (const p of ['screen', 'screen', 'battery']) g.stock[p]++; rep(.05); await say('Seu Toninho', 'Tá bom, rapaz. Amizade vale mais que dinheiro. Separei 2 telas e 1 bateria pra você, por conta da casa.', 'smile'); }
+      else { g.partsShock = (g.partsShock || 0) + 2; await say('Seu Toninho', 'Desculpa, rapaz... negócio é negócio. As peças vão ficar caras por uns dias.', 'sad'); }
+    } else if (kind === 'olga') {
+      await narr(`Dona Olga fecha o caderninho. <small>(Impressão: ${minds[0].score}/100)</small>`);
+
     } else if (kind === 'karen') {
       if (win) { g.vipNext = true; rep(.1); await say('Dona Regina', 'Hmpf. Pelo menos aqui sabem tratar uma cliente. Vou voltar... com o MEU celular. E pago bem.', 'smug'); }
       else { rep(-.4); await say('Dona Regina', 'Vou dar UMA estrela! UMA! E vou postar no grupo do condomínio!', 'angry'); }
     }
     VN.hide();
     if (!arg.keepSprite) await leaveAll(win ? 1 : -1);
-    if (window.EVENTS) EVENTS.review(npcs[0], win ? (outcome === 'deal' ? 4 : 5) : 1, kind);
+    if (window.EVENTS && ['reclamacao', 'calote', 'karen', 'crianca', 'barraco'].includes(kind)) EVENTS.review(npcs[0], win ? (outcome === 'deal' ? 4 : 5) : 1, kind);
     return res;
   }
 
-  window.FIGHTS = { run, NPCS, closeChat };
+  // ---------- NEGOCIAÇÃO DE PREÇO (digitando) ----------
+  async function haggle(c, job) {
+    const sp = SHOP.sprite;
+    const hg = BRAIN.createHaggle(c, job.price, { rep: G().rep, bonus: META.mod('haggleTalk') + META.mod('haggle') * .5 });
+    const pr = f => UI.money(r5(job.price * f));
+    VN.hide();
+    openChat([c], [`Faço por ${pr(1.3)}.`, 'É peça original, com garantia de 90 dias.', `${pr(1.15)}, preço de amigo.`, 'Esse conserto é complicado, leva tempo.', 'Tá bom, pode ser.', `${pr(1.5)} e fica perfeito.`], { meter: 'paciência', badge: `💬 Oferta: <b>${UI.money(hg.offer)}</b>`, quit: 'Aceitar a oferta atual' });
+    const bar = () => { setBars([{ npc: c, anger: hg.anger }]); const b = $('#chat-badge'); if (b) b.innerHTML = `💬 Oferta: <b>${UI.money(hg.offer)}</b>`; };
+    bar(); setTurns(0, hg.maxTurns);
+    await typeLine(sp, c.name, `Eu pago ${UI.money(job.price)}. Quanto você quer? Fala aí.`);
+    let result = null, final = false;
+    while (!result) {
+      const said = await ask();
+      if (said === null) { result = { price: hg.offer }; break; }
+      $('#chat-in').disabled = true;
+      logLine('Você', said, 'me').textContent = said || '...';
+      await wait(.3);
+      if (final) {
+        const a = BRAIN.analyze(said); const n = a.num.money;
+        if (a.hits.agree || (n !== null && n <= hg.offer) || /(^| )(fechado|aceito|pode ser|ok|esta bom|ta bom)( |$)/.test(a.s)) { await typeLine(sp, c.name, `Fechado em ${UI.money(hg.offer)}!`); result = { price: hg.offer }; }
+        else { if (sp) sp.setExpr('angry'); await typeLine(sp, c.name, 'Então não dá. Tchau!'); result = { price: null }; }
+        break;
+      }
+      const res = BRAIN.respondHaggle(hg, said);
+      if (sp) sp.setExpr(res.expr);
+      await typeLine(sp, c.name, res.text);
+      setTurns(hg.turn, hg.maxTurns); bar();
+      if (res.outcome === 'deal') result = { price: res.price };
+      else if (res.outcome === 'leave') result = { price: null };
+      else if (res.outcome === 'final') final = true;
+    }
+    await wait(.6); closeChat();
+    if (result.price) { META.bump('haggleTalks'); GAME.missionProgress('haggleTalks'); if (result.price > job.price) { META.bump('haggles'); GAME.missionProgress('haggles'); } }
+    return result;
+  }
+
+  window.FIGHTS = { run, haggle, NPCS, closeChat };
 })();

@@ -13,7 +13,7 @@
     // ---------- custos ----------
     rent(day) {
       const d = Math.max(0, day - 1);
-      return Math.round((55 + 25 * d + 2 * d * d + 0.035 * d * d * d) * (1 - Math.min(.6, mod('rentMult'))));
+      return Math.round((55 + 25 * d + 2 * d * d + 0.035 * d * d * d) * (1 - Math.min(G() && G().ownBuilding ? .88 : .6, mod('rentMult'))));
     },
     bills(day) {
       const g = G(); const el = window.DECOR ? DECOR.electricCount() : 0; const pets = window.DECOR ? DECOR.petCount() : 0;
@@ -39,7 +39,7 @@
       const arrow = m > prev + .02 ? '📈' : m < prev - .02 ? '📉' : '➡️';
       return `${arrow} Índice das peças: <b style="color:${m > 1.1 ? '#c1121f' : m < .92 ? '#1b7a3a' : 'inherit'}">${Math.round(m * 100)}%</b>`;
     },
-    partMult() { return (G().market || 1) * (1 + G().day * .01); },
+    partMult() { return (G().market || 1) * (1 + G().day * .01) * (G().partsShock > 0 ? 1.35 : 1) * ((window.RIVAL && RIVAL.dayMods().parts) || 1); },
     // sorte com retorno decrescente (evita cassino virar máquina de dinheiro com muitos bônus)
     luckEff(raw) { return raw <= 0 ? raw : raw / (1 + raw / 6); },
 
@@ -60,7 +60,7 @@
     // fechamento do dia: rendimentos, parcelas e juros
     closeDay(log) {
       const g = G(), b = ECON.bank(); const out = [];
-      if (b.savings > 0) { const y = Math.min(250, Math.round(b.savings * .01)); b.savings += y; out.push(['Rendimento da poupança 🐷', y]); }
+      if (b.savings > 0) { const y = Math.min(250 + mod('savingsRate') * 25000, Math.round(b.savings * (.01 + mod('savingsRate')))); b.savings += y; out.push(['Rendimento da poupança 🐷', y]); }
       if (b.loan) {
         const inst = Math.min(b.loan.left, b.loan.per);
         if (g.money - inst > 0) { GAME.addMoney(-inst, true); b.loan.left -= inst; out.push([`Parcela do empréstimo (${b.loan.paid + 1}/${b.loan.n})`, -inst]); b.loan.paid++; log.loan = (log.loan || 0) + inst; }
@@ -103,7 +103,7 @@
               ${b.loan ? `<p>Você deve <b>${money(b.loan.left)}</b> — parcelas de ${money(b.loan.per)} no fim de cada dia (${b.loan.paid}/${b.loan.n} pagas).</p>
                 <button class="btn gold" id="bk-payoff" ${g.money <= b.loan.left ? 'disabled' : ''}>Quitar agora (${money(Math.round(b.loan.left * .95))}, 5% off)</button>`
             : b.dirty ? '<p>Seu nome está sujo por atrasar parcelas. O gerente não quer nem te ver.</p>'
-              : `<p>Limite de hoje: <b>${money(lim)}</b> (sobe com o dia e a reputação). Paga <b>30% de juros</b> em 5 parcelas automáticas. Atrasar = multa e −reputação.</p>
+              : `<p>Limite de hoje: <b>${money(lim)}</b> (sobe com o dia e a reputação). Paga <b>${Math.round((.3 - Math.min(.15, mod('loanRate'))) * 100)}% de juros</b> em 5 parcelas automáticas. Atrasar = multa e −reputação.</p>
                 <div class="bank-row">${[.25, .5, 1].map(f => `<button class="btn purple" data-loan="${r5(lim * f)}">Pegar ${money(r5(lim * f))}</button>`).join('')}</div>`}
             </div>
             <div class="bank-col agiota">
@@ -126,7 +126,7 @@
           b.savings -= v; GAME.addMoney(v, true); AUDIO.sfx('cash'); render();
         });
         s.querySelectorAll('[data-loan]').forEach(el => el.onclick = () => {
-          const v = +el.dataset.loan; const total = Math.round(v * 1.3);
+          const v = +el.dataset.loan; const total = Math.round(v * (1.3 - Math.min(.15, mod('loanRate'))));
           b.loan = { left: total, per: Math.ceil(total / 5), n: 5, paid: 0, late: 0 };
           GAME.addMoney(v, true); AUDIO.sfx('cash'); UI.toast(`📄 Empréstimo de ${money(v)} aprovado! 5 parcelas de ${money(b.loan.per)}.`, 'good'); render();
         });

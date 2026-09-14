@@ -624,5 +624,31 @@
     spec: { skin: '#ffe0cc', hair: '#ff8c42', hairBack: 'ponytail', hairFront: 'side', eyes: '#2a9d8f', outfit: 'overalls', outfitColor: '#2a9d8f', outfitColor2: '#fff1e6', acc: ['cap', 'freckles'], capColor: '#e63946' },
   };
 
-  window.CHARS = { drawCharacter, ROSTER, HOSTESS, CLERK, shade };
+  // ---------- HISTÓRIA ----------
+  const STORY = {
+    neide: { id: 'neide', name: 'Tia Neide', spec: { skin: '#f3d0b6', hair: '#d9d9e0', hairBack: 'bun', hairFront: 'bun', eyes: '#6b8f71', eyeStyle: 'old', old: true, outfit: 'cardigan', outfitColor: '#2a9d8f', outfitColor2: '#fefae0', acc: ['glasses', 'earrings'], glassesColor: '#8d6e63' } },
+    vitor: { id: 'vitor', name: 'Vitor Valadares', spec: { skin: '#f1c9a5', hair: '#d4a017', hairBack: 'short', hairFront: 'parted', eyes: '#1d3557', eyeStyle: 'sharp', male: true, outfit: 'suit', outfitColor: '#14213d', outfitColor2: '#29f3ff', acc: ['glasses'], glassesColor: '#111' } },
+    olga: { id: 'olga', name: 'Dona Olga', spec: { skin: '#f6dcc6', hair: '#f1f1f1', hairBack: 'bob', hairFront: 'curly', eyes: '#6a4c93', eyeStyle: 'old', old: true, outfit: 'turtleneck', outfitColor: '#6a4c93', outfitColor2: '#ffd23f', acc: ['earrings', 'glasses'], glassesColor: '#c9a227', lips: '#9d0208' } },
+    beto: { id: 'beto', name: 'Beto', spec: { skin: '#c68b59', hair: '#2b2d42', hairBack: 'short', hairFront: 'short', eyes: '#3d2817', male: true, outfit: 'tshirt', outfitColor: '#29a3ff', outfitColor2: '#ffffff', acc: ['cap'], capColor: '#29a3ff' } },
+    zeesperto: { id: 'zeesperto', name: 'Zé Esperto', spec: { skin: '#d4a373', hair: '#222222', hairBack: 'short', hairFront: 'messy', eyes: '#222222', eyeStyle: 'sharp', male: true, outfit: 'jacket', outfitColor: '#6b705c', outfitColor2: '#ffb703', acc: ['cap', 'mustache'], capColor: '#111111' } },
+    juninho: { id: 'juninho', name: 'Juninho', height: 2.1, spec: { skin: '#ffe0cc', hair: '#6f4518', hairBack: 'short', hairFront: 'messy', eyes: '#3a86ff', male: true, outfit: 'tshirt', outfitColor: '#ffbe0b', outfitColor2: '#3a86ff', acc: ['bandaid', 'freckles'] } },
+    marcela: { id: 'marcela', name: 'Marcela', spec: { skin: '#e0ac69', hair: '#4a2c2a', hairBack: 'long', hairFront: 'side', eyes: '#6f4518', outfit: 'sporty', outfitColor: '#e76f51', outfitColor2: '#ffffff', acc: ['earrings'] } },
+    rodrigo: { id: 'rodrigo', name: 'Rodrigo', spec: { skin: '#e0ac69', hair: '#1b1b1b', hairBack: 'short', hairFront: 'short', eyes: '#3d2817', male: true, outfit: 'tshirt', outfitColor: '#264653', outfitColor2: '#e9c46a', acc: ['beard'] } },
+    cris: { id: 'cris', name: 'Cris Notícia', spec: { skin: '#8d5524', hair: '#1b1b1b', hairBack: 'ponytail', hairFront: 'parted', eyes: '#6f4518', outfit: 'jacket', outfitColor: '#d62828', outfitColor2: '#ffffff', acc: ['glasses', 'earrings'], glassesColor: '#333333' } },
+    toninho: { id: 'toninho', name: 'Seu Toninho', spec: { skin: '#e0b98e', hair: '#8d8d8d', hairBack: 'bald', hairFront: 'bald', eyes: '#577590', eyeStyle: 'old', old: true, male: true, outfit: 'overalls', outfitColor: '#3a6ea5', outfitColor2: '#fefae0', acc: ['mustache'] } },
+  };
+  // ---------- CLIENTES LENDÁRIOS (a cada 5 dias) ----------
+  const B = (o) => Object.assign({ wealth: 3.2, patience: .6, haggle: .35, tip: .4, boss: true }, o);
+  const BOSSES = [
+    B({ id: 'aurelio', name: 'Sr. Aurélio', title: 'O Colecionador', spec: { skin: '#f1d3bc', hair: '#ececec', hairBack: 'short', hairFront: 'parted', eyes: '#3a3a3a', eyeStyle: 'old', old: true, male: true, outfit: 'suit', outfitColor: '#5e3023', outfitColor2: '#ffd23f', acc: ['mustache', 'glasses'], glassesColor: '#b08d57' }, devices: ['rotary', 'nes', 'gameboy', 'boombox'],
+      greet: ['Boa tarde. Coleciono relíquias eletrônicas. Esta aqui é única no mundo.'], thanks: ['Magnífico. Uma restauração digna de museu.'], angry: ['Uma relíquia... arruinada. Inaceitável.'] }),
+    B({ id: 'cleo', name: 'Cléo Diamante', title: 'A Estrela da TV', spec: { skin: '#ffe0d0', hair: '#f15bb5', hairBack: 'verylong', hairFront: 'side', eyes: '#9b5de5', outfit: 'idol', outfitColor: '#ffd6ff', outfitColor2: '#b5179e', acc: ['star', 'earrings'], alwaysBlush: true, lips: '#d00000' }, devices: ['notch', 'galaxy', 'dslr', 'tablet'],
+      greet: ['Amor, eu entro AO VIVO em uma hora e meu aparelho morreu. Me salva que eu te faço famoso!'], thanks: ['PERFEITO! Vou falar da sua loja no programa de domingo!'], angry: ['Que vexame nacional! Nunca mais!'] }),
+    B({ id: 'monteiro', name: 'Sr. Monteiro', title: 'O Magnata', spec: { skin: '#e8c4a0', hair: '#3c2f2f', hairBack: 'short', hairFront: 'parted', eyes: '#1d3557', eyeStyle: 'sharp', male: true, outfit: 'suit', outfitColor: '#111111', outfitColor2: '#ffd23f', acc: ['beard', 'glasses'], glassesColor: '#ffd23f' }, devices: ['mac', 'drone', 'vr', 'switch'],
+      greet: ['Tenho dez empresas e nenhum técnico de confiança. Vamos ver se você é diferente.'], thanks: ['Excelente. Pessoas competentes são raras. Guarde meu cartão.'], angry: ['Dinheiro jogado fora. Que decepção.'] }),
+    B({ id: 'pixel', name: 'Pixel', title: 'A Hacker', spec: { skin: '#fde2cf', hair: '#80ffdb', hairBack: 'bob', hairFront: 'undercut', eyes: '#72efdd', outfit: 'hoodie', outfitColor: '#1b1b2f', outfitColor2: '#80ffdb', acc: ['headphones', 'piercing'], phonesColor: '#80ffdb' }, devices: ['notebook', 'mac', 'pixel', 'tab2'],
+      greet: ['Sem perguntas. Conserta e esquece que me viu. O pagamento é generoso.'], thanks: ['Nada mal pra um analógico. Te devo uma.'], angry: ['Tsc. Vou ter que te hackear de raiva.'] }),
+  ];
+
+  window.CHARS = { drawCharacter, ROSTER, HOSTESS, CLERK, STORY, BOSSES, shade };
 })();

@@ -1,4 +1,4 @@
-// Sistemas de progressão: melhorias (50), itens da lojinha (32), buffs, relíquias permanentes e conquistas.
+// Sistemas de progressão: melhorias (76), itens da lojinha (32), buffs, relíquias permanentes e conquistas.
 (function () {
   const RAR = {
     comum: { name: 'Comum', color: '#8ecae6', w: 60 },
@@ -64,6 +64,33 @@
     U('bolsa', 'Investimento na bolsa', 'Rende 6% do caixa no fim do dia (máx. R$ 500).', 'epico', { interest: .06 }, { emoji: '📈' }),
     U('midas', 'Toque de Midas', 'Clientes pagam +25% e gorjetas +25%.', 'lendario', { payMult: .25, tipMult: .25 }, { emoji: '👑' }, { needAch: 3 }),
     U('trevo_dourado', 'Trevo dourado', 'Sorte +2, prêmios do cassino +15% e caixa misteriosa melhor.', 'lendario', { luck: 2, casinoPay: .15, box: 1 }, { emoji: '☘️' }, { needAch: 5 }),
+    // ---- v1.4: 26 melhorias novas ----
+    U('oratoria', 'Curso de oratória', 'Brigas começam 12 pontos mais calmas e negociação digitando rende +5%.', 'comum', { calm: 12, haggleTalk: .05 }, { emoji: '🎤' }),
+    U('carisma', 'Carisma de vendedor', 'Negociando digitando, os clientes aceitam pagar até 10% a mais.', 'raro', { haggleTalk: .10 }, { emoji: '😎' }),
+    U('cafe_gratis', 'Cafezinho de boas-vindas', 'Toda briga começa com um café: raiva −15 logo de cara.', 'comum', { fightFirst: 15 }, { emoji: '☕' }),
+    U('vigia', 'Vigia noturno', 'Nada de assaltos (de dia ou de madrugada).', 'raro', { antiTheft: 1 }, { emoji: '🔦' }),
+    U('contador_pro', 'Contador esperto', 'Impostos 35% menores.', 'raro', { taxCut: .35 }, { emoji: '🧾' }),
+    U('energia_solar', 'Energia solar', 'Conta de luz e internet 50% mais barata.', 'raro', { billsCut: .5 }, { emoji: '☀️' }),
+    U('kit_basico', 'Kit básico', 'Toda manhã chega 1 bateria e 1 conector USB pro estoque.', 'comum', { dailyKit: 1 }, { model: 'battery_aa' }),
+    U('turbo', 'Modo turbo', '+20s na meta de tempo e bônus de rapidez +10%.', 'raro', { parTime: 20, fastBonus: .1 }, { emoji: '⚡' }),
+    U('olho_bionico', 'Olho biônico', 'Mostra sempre o defeito real e o multímetro avisa leituras anormais.', 'lendario', { diagHint: 1, scanner: 1 }, { emoji: '🦾' }, { needAch: 4 }),
+    U('selo_garantia', 'Selo de garantia', 'Clientes insatisfeitos não voltam pra reclamar e a reputação cai 20% menos.', 'raro', { noGrudge: 1, repLossMult: .2 }, { emoji: '🛡️' }),
+    U('poupanca_turbo', 'Poupança turbinada', 'A poupança rende 2% ao dia em vez de 1%.', 'comum', { savingsRate: .01 }, { model: 'e_piggy' }),
+    U('credito_facil', 'Gerente amigo', 'Empréstimos com metade dos juros (15%).', 'comum', { loanRate: .15 }, { emoji: '🏦' }),
+    U('freguesia', 'Freguesia fiel', 'Clientes que voltam pagam +5% por visita (até +25%).', 'raro', { loyalPay: .05 }, { emoji: '💞' }),
+    U('app_delivery', 'App de entregas', '+1 cliente por dia e contratos de empresas pagam +30%.', 'epico', { customers: 1, contractBonus: .3 }, { emoji: '🛵' }),
+    U('vitrine', 'Vitrine iluminada', 'O estilo da decoração conta 50% a mais.', 'raro', { styleMult: .5 }, { emoji: '💡' }),
+    U('marketing', 'Agência de marketing', 'Ganha +2% do bairro todo dia na guerra contra a ConsertaJá.', 'raro', { shareDaily: .02 }, { emoji: '📣' }),
+    U('advogado_rival', 'Advogado de defesa', 'Ataques da ConsertaJá têm metade do efeito.', 'raro', { rivalResist: .5 }, { emoji: '👨‍⚖️' }),
+    U('fama', 'Fama no bairro', 'Na hora: +10% do bairro e +0,3 de reputação. Depois: VIP +5%.', 'epico', { vipChance: .05, shareBoost: .1 }, { emoji: '🌟' }),
+    U('rede_social', 'Perfil nas redes', 'Avaliações 5★ dão reputação extra e as de 1★ pesam metade.', 'comum', { reviewBonus: 1 }, { emoji: '📱' }),
+    U('caixa_forte', 'Cofre de parede', 'Roubos, golpes e sobrinhos do agiota levam no máximo 5% do caixa.', 'raro', { lossCap: .05 }, { emoji: '🔐' }),
+    U('mentor', 'Manual do mentor', 'O aprendiz aprende 2x mais rápido.', 'comum', { apprenticeXp: 1 }, { emoji: '📗' }),
+    U('bancada_dupla', 'Bancada do aprendiz', 'O aprendiz pode atender +1 cliente por dia.', 'epico', { apprenticeJobs: 1 }, { model: 'toolbox' }),
+    U('reforma_expressa', 'Pedreiro de confiança', 'Reformas da loja 25% mais baratas.', 'raro', { renoDiscount: .25 }, { emoji: '🧱' }),
+    U('magnata', 'Visão de magnata', 'Clientes pagam +15% e +1 cliente por dia.', 'lendario', { payMult: .15, customers: 1 }, { emoji: '💼' }, { needAch: 6 }),
+    U('negociador', 'Negociador nato', 'Negociar fica 10% mais fácil e a negociação digitando rende +8%.', 'epico', { haggle: .1, haggleTalk: .08 }, { emoji: '🤝' }),
+    U('kit_emergencia', 'Kit de emergência', 'Extintor sempre à mão (evita incêndio e multa) e +5s na meta.', 'comum', { fireSafe: 1, parTime: 5 }, { emoji: '🧯' }),
   ];
   const UPG = Object.fromEntries(UPGRADES.map(u => [u.id, u]));
 
@@ -132,6 +159,14 @@
     { id: 'diplomat', name: 'Diplomata', desc: 'Acalme 10 brigas conversando.', stat: 'fightsWon', goal: 10, relic: { name: 'Megafone da paz', emoji: '🕊️', desc: 'Clientes irritados começam as brigas bem mais calmos.', mods: { calm: 15 } } },
     { id: 'decorator', name: 'Decorador', desc: 'Tenha 8 decorações numa partida.', stat: 'decorOwned', goal: 8, relic: { name: 'Revista de decoração', emoji: '🛋️', desc: 'Catálogo Decora+ 15% mais barato.', mods: { decorDiscount: .15 } } },
     { id: 'survivor', name: 'Sobrevivente', desc: 'Passe por 25 eventos aleatórios.', stat: 'events', goal: 25, relic: { name: 'Amuleto do acaso', emoji: '🧿', desc: 'Eventos bons no jornal ficam 30% mais frequentes.', mods: { goodEvents: .3 } } },
+    { id: 'end_dono', name: 'Final: O Dono do Pedaço', desc: 'Compre o prédio no leilão.', stat: 'end_dono', goal: 1, relic: { name: 'Escritura emoldurada', emoji: '🏠', desc: 'Aluguel 15% mais barato.', mods: { rentMult: .15 } } },
+    { id: 'end_justica', name: 'Final: Justiça do Bairro', desc: 'Desmascare a ConsertaJá no leilão.', stat: 'end_justica', goal: 1, relic: { name: 'Distintivo do bairro', emoji: '🌟', desc: 'Sorte +1 e clientes pagam +5%.', mods: { luck: 1, payMult: .05 } } },
+    { id: 'end_socios', name: 'Final: Sócios Improváveis', desc: 'Vire sócio do Vitor.', stat: 'end_socios', goal: 1, relic: { name: 'Contrato de sociedade', emoji: '🤝', desc: '+1 cliente por dia.', mods: { customers: 1 } } },
+    { id: 'end_horizontes', name: 'Final: Novos Horizontes', desc: 'Venda a loja no leilão e vá pra praia.', stat: 'end_horizontes', goal: 1, relic: { name: 'Chinelo da Tia Neide', emoji: '👡', desc: 'Começa toda partida com +R$ 150.', mods: { startMoney: 150 } } },
+    { id: 'end_empregado', name: 'Final: Funcionário do Mês', desc: 'Aceite a proposta do Vitor.', stat: 'end_empregado', goal: 1, relic: { name: 'Crachá da ConsertaJá', emoji: '👔', desc: '+20% de XP.', mods: { xpMult: .2 } } },
+    { id: 'end_despejo', name: 'Final: Despejo', desc: 'Perca o leilão.', stat: 'end_despejo', goal: 1, relic: { name: 'Caixa de mudança', emoji: '📦', desc: 'Negociar +10%: você aprendeu a lutar pelo preço.', mods: { haggle: .1, haggleTalk: .05 } } },
+    { id: 'duelist', name: 'Duelista', desc: 'Vença um Duelo de Consertos.', stat: 'duelsWon', goal: 1, relic: { name: 'Luva de duelista', emoji: '🥊', desc: 'Ataques da ConsertaJá 25% mais fracos.', mods: { rivalResist: .25 } } },
+    { id: 'legend', name: 'Caçador de Lendas', desc: 'Atenda 3 clientes lendários com 85%+.', stat: 'bossWins', goal: 3, relic: { name: 'Autógrafo lendário', emoji: '✍️', desc: 'Clientes VIP aparecem 5% mais.', mods: { vipChance: .05 } } },
     { id: 'hero', name: 'Pega Ladrão', desc: 'Pegue 2 ladrões no flagra.', stat: 'thieves', goal: 2, relic: { name: 'Taco de beisebol', emoji: '🏏', desc: 'Contas de luz e internet 20% mais baratas (a vizinhança te respeita).', mods: { billsCut: .2 } } },
   ];
 
@@ -143,6 +178,8 @@
     { id: 'fast2', txt: 'Termine 2 consertos dentro da meta de tempo', stat: 'fast', goal: 2 },
     { id: 'nodmg', txt: 'Termine 2 consertos sem nenhum dano', stat: 'nodmg', goal: 2 },
     { id: 'serve4', txt: 'Conserte 3 aparelhos', stat: 'repairs', goal: 3 },
+    { id: 'talk2', txt: 'Feche 2 negociações digitando', stat: 'haggleTalks', goal: 2 },
+    { id: 'calm1', txt: 'Acalme 1 cliente irritado conversando', stat: 'calm', goal: 1 },
   ];
 
   // ---------- meta persistente (entre partidas) ----------
@@ -167,6 +204,7 @@
       for (const b of G.buffs || []) if (b.mods[key]) v += b.mods[key];
       for (const id in (G.bag || {})) { const it = ITM[id]; if (it && it.passive && G.bag[id] > 0 && it.passive[key]) v += it.passive[key]; }
       if (window.DECOR) v += DECOR.modSum(key);
+      if (window.STORY) v += STORY.modSum(key);
       if (G.event && G.event.mods && G.event.mods[key]) v += G.event.mods[key];
       return v;
     },

@@ -838,5 +838,96 @@
   "author": "Alex Safayan",
   "license": "CC-BY 3.0",
   "url": "https://poly.pizza/m/3AvNxE4RRYx"
+ },
+ {
+  "file": "st_bld1.glb",
+  "title": "Building",
+  "author": "Kay Lousberg",
+  "license": "CC0",
+  "url": "https://poly.pizza/m/EL3ePInr1N"
+ },
+ {
+  "file": "st_bld2.glb",
+  "title": "Building",
+  "author": "Kay Lousberg",
+  "license": "CC0",
+  "url": "https://poly.pizza/m/qOhhGLftam"
+ },
+ {
+  "file": "st_large.glb",
+  "title": "Large Building",
+  "author": "Kenney",
+  "license": "CC0",
+  "url": "https://poly.pizza/m/ppwtREejXg"
+ },
+ {
+  "file": "st_small.glb",
+  "title": "Small Building",
+  "author": "Kenney",
+  "license": "CC0",
+  "url": "https://poly.pizza/m/gyjF60t7CG"
+ },
+ {
+  "file": "st_light.glb",
+  "title": "Street Light",
+  "author": "Quaternius",
+  "license": "CC0",
+  "url": "https://poly.pizza/m/nFwrlcLvM5"
+ },
+ {
+  "file": "st_car.glb",
+  "title": "Car Hatchback",
+  "author": "Kay Lousberg",
+  "license": "CC0",
+  "url": "https://poly.pizza/m/BG0KAhmGDt"
+ },
+ {
+  "file": "st_car2.glb",
+  "title": "Car",
+  "author": "Quaternius",
+  "license": "CC0",
+  "url": "https://poly.pizza/m/unqqkULtRU"
+ },
+ {
+  "file": "st_police.glb",
+  "title": "Police Car",
+  "author": "Quaternius",
+  "license": "CC0",
+  "url": "https://poly.pizza/m/BwwnUrWGmV"
+ },
+ {
+  "file": "st_bench.glb",
+  "title": "Bench",
+  "author": "Quaternius",
+  "license": "CC0",
+  "url": "https://poly.pizza/m/jLxjFxFRpw"
+ },
+ {
+  "file": "st_street.glb",
+  "title": "Street Straight",
+  "author": "Quaternius",
+  "license": "CC0",
+  "url": "https://poly.pizza/m/UA4axT3nIQ"
+ },
+ {
+  "file": "st_cross.glb",
+  "title": "Cross walk",
+  "author": "Quaternius",
+  "license": "CC0",
+  "url": "https://poly.pizza/m/9zxw2NmVI6"
+ },
+ {
+  "file": "st_busstop.glb",
+  "title": "Bus Stop",
+  "author": "Zsky",
+  "license": "CC-BY 3.0",
+  "url": "https://poly.pizza/m/OWczicNWhO"
+ },
+ {
+  "file": "st_tree.glb",
+  "title": "Tree",
+  "author": "Poly by Google",
+  "license": "CC-BY 3.0",
+  "url": "https://poly.pizza/m/6pwiq7hSrHr"
  }
 ]

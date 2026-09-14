@@ -22,6 +22,7 @@
       // v1.3
       bank: { savings: 0, loan: null, agiota: null, dirty: 0, metAgiota: false }, market: 1, marketHist: [1],
       decor: { owned: [], placed: {}, broken: [], petDay: 0 }, reviews: [], dayReviews: [], contracts: [], grudges: [], eventsToday: 0, queue: [], queueDiscount: {}, vipNext: false,
+      rival: null, story: null, team: null, shopLevel: 1, bossDone: 0,
     };
   }
   function normalize(s) { // saves antigos
@@ -48,6 +49,7 @@
     addItem(id, n) { addItem(id, n); },
     gainXP(v) { return gainXP(v); },
     warrantyRepair(c, prev) { return warrantyRepair(c, prev); },
+    makeJob(c) { return makeJob(c); },
     payMult() { return (1 + mod('casinoPay')) * (G && G.event && G.event.casino ? G.event.casino : 1); },
     addMoney(v, silent) {
       G.money = Math.round(G.money + v);
@@ -105,6 +107,7 @@
     G.upgrades.push(id);
     const u = META.UPG[id];
     if (id === 'plantinha') G.rep = Math.min(5, G.rep + .3);
+    if (u.mods.shareBoost) { RIVAL.share(u.mods.shareBoost); G.rep = Math.min(5, G.rep + .3); }
     AUDIO.sfx('buy');
     UI.toast(`<span style="color:${META.RAR[u.rarity].color}">◆</span> Melhoria <b>${u.name}</b> — ${u.desc}`, 'good');
     updateHUD(); META.renderBuffs();
@@ -114,7 +117,7 @@
   function xpNeed(l) { return 50 + (l - 1) * 35; }
   function updateHUD(delta) {
     if (!G) return;
-    $('#hud-day').textContent = 'Dia ' + G.day;
+    $('#hud-day').textContent = 'Dia ' + G.day + (G.story && !G.story.done && G.day <= 25 ? '/25' : '');
     const h = Math.floor(G.hour), m = Math.round((G.hour - h) * 60);
     $('#hud-time').textContent = String(h).padStart(2, '0') + ':' + String(m).padStart(2, '0');
     const mm = $('#hud-money');
@@ -124,6 +127,8 @@
     const st = Math.round(G.rep);
     $('#hud-rep').textContent = '★'.repeat(st) + '☆'.repeat(5 - st);
     $('#hud-rent').textContent = 'Aluguel hoje: ' + UI.money(rentFor(G.day));
+    const hs = $('#hud-share'); const rOn = window.RIVAL && RIVAL.active(); hs.classList.toggle('hidden', !rOn);
+    if (rOn) { const sh = G.rival.share; hs.innerHTML = `⚔️ Bairro <b style="color:${sh >= .5 ? '#1b7a3a' : '#c1121f'}">${Math.round(sh * 100)}%</b>`; }
     const bk = $('#hud-bank'); const sv = (G.bank && G.bank.savings) || 0; const debt = (G.bank && ((G.bank.loan && G.bank.loan.left) || 0) + ((G.bank.agiota && G.bank.agiota.debt) || 0)) || 0;
     bk.classList.toggle('hidden', !sv && !debt);
     bk.innerHTML = (sv ? `🐷 ${UI.money(sv)}` : '') + (debt ? ` <span style="color:#c1121f">📄 −${UI.money(debt)}</span>` : '');
@@ -191,6 +196,10 @@
       window.__G = () => G;
       if (t === 'fight') { ENGINE.use('shop'); SHOP.setTime(11); AUDIO.music('shop'); const k = q.get('kind') || 'reclamacao'; const c = CHARS.ROSTER.find(x => x.id === q.get('char')) || CHARS.ROSTER[1]; const pair = [CHARS.ROSTER[0], CHARS.ROSTER[7]]; if (k === 'agiota') { G.bank.agiota = { debt: 600, due: 1, took: 400 }; } FIGHTS.run(k, { char: c, pair, job: { price: 200, name: 'Galáxia S9' }, prev: null, debt: 600 }).then(r => { window.__fight = r; console.log('FIGHT', JSON.stringify(r)); }); return; }
       if (t === 'event') { ENGINE.use('shop'); SHOP.setTime(11); AUDIO.music('shop'); const ev = [...EVENTS.MID, ...EVENTS.NIGHT].find(e => e.id === q.get('id')); EVENTS.runEvent(ev).then(() => { window.__event = 'done'; console.log('EVENT done'); }); return; }
+      if (t === 'chapter') { STORY.play(q.get('id')).then(r => { window.__chapter = r || 'done'; console.log('CHAPTER', r); }); return; }
+      if (t === 'haggle') { ENGINE.use('shop'); SHOP.setTime(11); const c = CHARS.ROSTER.find(x => x.id === q.get('char')) || CHARS.ROSTER[2]; SHOP.showCustomer(c).then(() => FIGHTS.haggle(c, { price: 200, name: 'Galáxia S9' })).then(r => { window.__haggle = r; console.log('HAGGLE', JSON.stringify(r)); }); return; }
+      if (t === 'boss') { ENGINE.use('shop'); SHOP.setTime(17); G.customersLeft = 0; bossCustomer(); return; }
+      if (t === 'street') { ENGINE.use('street'); STREET.setTime(+(q.get('h') || 10)); STREET.setRival(q.get('rival') === '1'); STREET.shot(q.get('shot') || 'ours'); return; }
       if (t === 'catalog') { ENGINE.use('shop'); SHOP.setTime(11); DECOR.openCatalog(() => { }); return; }
       if (t === 'bank') { ENGINE.use('shop'); SHOP.setTime(11); ECON.openBank(() => { }); return; }
       if (t === 'day') { G.day = +(q.get('day') || 1) - 1; startDay(); return; }
@@ -255,7 +264,7 @@
       <div class="title-foot">${best ? `Recorde: dia ${best} · ` : ''}Relíquias ativas: ${achN} · Modelos 3D: poly.pizza · Sons: Kenney · Música: Kevin MacLeod</div>`, '');
     s.style.background = 'transparent';
     $('#m-new').onclick = () => { AUDIO.sfx('confirm'); newGame(); };
-    $('#m-cont').onclick = () => { if (save) { AUDIO.sfx('confirm'); G = normalize(save); DECOR.apply(); hud(true); nightChoiceOrDay(true); } };
+    $('#m-cont').onclick = () => { if (save) { AUDIO.sfx('confirm'); G = normalize(save); DECOR.apply(); SHOP.setLevel(G.shopLevel || 1); hud(true); nightChoiceOrDay(true); } };
     $('#m-col').onclick = () => { AUDIO.sfx('open'); collection(); };
     $('#m-how').onclick = () => { AUDIO.sfx('open'); howTo(); };
     $('#m-cred').onclick = () => { AUDIO.sfx('open'); credits(); };
@@ -266,6 +275,9 @@
   function howTo() {
     const s = UI.screen(`<div class="card" style="text-align:left;max-width:780px">
       <h2 style="text-align:center">Como jogar</h2>
+      <p>📖 <b>História</b>: a Tia Neide te deixou a loja. No <b>dia 25</b> a Dona Olga leiloa o prédio — e o rival <b>Vitor Valadares</b>, da ConsertaJá, quer ficar com tudo. Capítulos com cutscenes nos dias 3, 6, 9, 12, 15, 18 e 21, e <b>6 finais</b> diferentes, conforme suas escolhas, seu dinheiro, a fatia do bairro e as provas que você juntar.</p>
+      <p>⚔️ <b>Guerra do Bairro</b>: a barra "Bairro" mostra quantos clientes preferem sua loja. À noite, use o <b>📣 Contra-ataque</b> (panfletos, rádio, festa, espionar). 🧑‍🔧 Contrate um <b>aprendiz</b> que conserta sozinho e 🏗️ <b>reforme a loja</b>. A cada 5 dias aparece um <b>cliente lendário</b>.</p>
+      <p>💬 <b>Negocie o preço digitando</b>: diga quanto quer ("faço por R$ 250"), use argumentos (peça original, garantia) e feche o acordo.</p>
       <p>☀️ <b>De dia</b> você atende clientes. Ouça o problema, negocie o preço e conserte o aparelho na bancada 3D. Consertos dão <b>XP</b>: a cada nível você escolhe <b>1 de 3 melhorias</b> aleatórias.</p>
       <p>🔧 <b>No conserto</b>: tire os parafusos (segure o clique), aqueça a cola, abra, <b>meça os pontos de teste</b> para achar o defeito real, <b>desconecte a bateria</b>, troque a peça e remonte. Teclas <b>1–9</b> trocam de ferramenta. Consertos perfeitos seguidos formam <b>combo</b> 🔥.</p>
       <p>🏪 <b>Lojinha da esquina</b>: a Tati vende itens que mudam todo dia (café, cola, raspadinha, trevo, cigarro...). Eles vão para a <b>mochila</b> 🎒 (tecla <b>I</b>). O cigarro só pode ser fumado no cassino e dá sorte.</p>
@@ -309,7 +321,7 @@
   // ---------- coleção: conquistas, relíquias, melhorias e itens ----------
   function collection(tab = 'ach') {
     const m = META.meta;
-    const tabs = [['ach', `🏆 Conquistas (${m.ach.length}/${META.ACH.length})`], ['upg', `◆ Melhorias (${m.seenUpg.length}/${META.UPGRADES.length})`], ['itm', `🎒 Itens (${m.seenItems.length}/${META.ITEMS.length})`]];
+    const tabs = [['ach', `🏆 Conquistas (${m.ach.length}/${META.ACH.length})`], ['upg', `◆ Melhorias (${m.seenUpg.length}/${META.UPGRADES.length})`], ['itm', `🎒 Itens (${m.seenItems.length}/${META.ITEMS.length})`], ['fin', `🎬 Finais (${(m.endings || []).length}/6)`]];
     let body = '';
     if (tab === 'ach') {
       body = `<p style="font-size:14px">Cada conquista libera uma <b>relíquia permanente</b>, ativa em todas as partidas.</p><div class="ach-grid">` + META.ACH.map(a => {
@@ -323,6 +335,11 @@
         const seen = m.seenUpg.includes(u.id); const r = META.RAR[u.rarity];
         return `<div class="up-card mini" style="border-color:${seen ? r.color : '#ddd'}">${seen ? `<div class="ico">${upgIcon(u)}</div><h3>${u.name}</h3><small style="color:${r.color};font-weight:800">${r.name}</small><p>${u.desc}</p>` : `<div class="ico">❔</div><h3>???</h3><small>${r.name}${u.needAch ? ` · ${u.needAch} conquistas` : ''}</small>`}</div>`;
       }).join('') + '</div>';
+    } else if (tab === 'fin') {
+      const E = STORY.ENDINGS, got = m.endings || [];
+      body = `<div class="grid" style="grid-template-columns:repeat(auto-fill,minmax(250px,1fr))">` + Object.keys(E).map(k => got.includes(k)
+        ? `<div class="up-card mini" style="border-color:#ffc300"><div class="ico">${E[k].emoji}</div><h3>${E[k].title}</h3><small style="font-weight:800">${E[k].tag}</small><p>${E[k].text[0]}</p></div>`
+        : `<div class="up-card mini"><div class="ico">❔</div><h3>???</h3><small>${E[k].tag}</small></div>`).join('') + '</div><p style="font-size:13px">Os finais acontecem no leilão do dia 25 (e um deles, antes...). Cada final libera uma relíquia permanente.</p>';
     } else {
       body = `<div class="grid" style="grid-template-columns:repeat(auto-fill,minmax(150px,1fr))">` + META.ITEMS.map(it => {
         const seen = m.seenItems.includes(it.id);
@@ -347,12 +364,12 @@
     ENGINE.use('shop'); SHOP.setTime(8.5); hud(false);
     AUDIO.music('shop');
     VN.speaker = null;
-    await VN.say('', 'Sua tia Neide se aposentou e deixou a pequena assistência técnica dela nas suas mãos...');
-    await VN.say('', 'Junto com a loja, veio um bilhete: <i>“O aluguel sobe todo santo dia. Não deixe o dinheiro acabar. Ah, e fique LONGE do cassino da esquina.”</i>');
+    SHOP.setLevel(1);
+    await STORY.intro();
     const relics = META.relicsOwned();
+    ENGINE.use('shop'); SHOP.setTime(8.5);
     if (relics.length) await VN.say('', `Suas relíquias te acompanham: ${relics.map(a => a.relic.emoji).join(' ')} <small>(${relics.length} ativas)</small>`);
-    await VN.say('', 'Você tem <b>' + UI.money(G.money) + '</b>, uma bancada, algumas ferramentas... e muita coragem.');
-    await VN.say('', 'Hora de abrir as portas! ♥');
+    await VN.say('', 'Você tem <b>' + UI.money(G.money) + '</b>, uma bancada, algumas ferramentas... e muita coragem. Hora de abrir as portas! ♥');
     hud(true);
     startDay();
   }
@@ -377,12 +394,17 @@
     VN.hide(); FIGHTS.closeChat();
     G.day++; G.hour = 9;
     META.bump('bestDay', G.day, 'max');
+    SHOP.setLevel(G.shopLevel || 1); DECOR.apply();
+    const sr = await STORY.onDayStart();
+    if (sr === 'menu') { localStorage.removeItem('ddcc_save'); G.dead = true; G = null; titleScreen(); return; }
+    FIGHTS.closeChat(); VN.hide();
     G.event = EVENTS.rollDaily();
     ECON.rollMarket();
     G.log = newLog();
     G.dayQuality = []; G.dayReviews = []; G.eventsToday = 0;
     G.extraCust = 0;
-    let n = 3 + Math.round(mod('customers')) + (G.rep >= 4.2 ? 1 : 0) + (G.event.cust || 0);
+    const rivalAct = RIVAL.dailyAction();
+    let n = 3 + Math.round(mod('customers')) + (G.rep >= 4.2 ? 1 : 0) + (G.event.cust || 0) + RIVAL.dayMods().cust;
     if (G.day === 1) n = 3;
     G.customersLeft = Math.max(2, n);
     G.served = [];
@@ -393,7 +415,11 @@
     AUDIO.music('shop');
     hud(true); updateHUD();
     AUDIO.sfx('news');
-    const extra = DECOR.morning();
+    const extra = [...(await EVENTS.morning()), ...DECOR.morning()];
+    if (rivalAct) extra.unshift(`⚔️ <b>ConsertaJá:</b> ${rivalAct.txt} <small>(bairro: ${Math.round(G.rival.share * 100)}% seu)</small>`);
+    if (mod('dailyKit')) { G.stock.battery++; G.stock.port++; extra.push('🔋 Kit básico: +1 bateria e +1 conector no estoque'); }
+    if (!STORY.state().done) extra.push(`🏠 Leilão do prédio: <b>dia ${STORY.FINAL_DAY}</b> (${STORY.FINAL_DAY - G.day > 0 ? `faltam ${STORY.FINAL_DAY - G.day} dias` : 'é hoje!'}) · ${STORY.chapterLabel()}`);
+    if (BOSS.dayHasBoss(G.day)) extra.push('👑 Dizem que um <b>cliente lendário</b> vai aparecer no fim do expediente hoje...');
     const b = G.bank;
     if (b.agiota) extra.push(`🕶️ Dívida com o Jorjão: <b style="color:#c1121f">${UI.money(b.agiota.debt)}</b> (prazo: dia ${b.agiota.due})`);
     if (b.loan) extra.push(`📄 Empréstimo: faltam ${UI.money(b.loan.left)}`);
@@ -450,7 +476,7 @@
     const brand = dev.name.split(' ')[0].toUpperCase();
     const vip = !!G.vipNext || (G.day > 1 && Math.random() < .05 + mod('vipChance'));
     G.vipNext = false;
-    const mult = (1 + (G.day - 1) * .07) * (G.event.payMult || 1) * (0.85 + G.rep * .06) * rnd(.9, 1.12) * (vip ? 2.2 : 1) * (cd ? 1.1 : 1);
+    const mult = (1 + (G.day - 1) * .07) * (G.event.payMult || 1) * (0.85 + G.rep * .06) * rnd(.9, 1.12) * (vip ? 2.2 : 1) * (cd ? 1.1 : 1) * RIVAL.dayMods().pay * (1 + Math.min(.25, (G.visits[c.id] || 0) * mod('loyalPay')));
     const price = round5(F.base * dev.value * c.wealth * mult);
     return { model, name: dev.name, type: dev.type, fault: f, symptom, brand, price, customerName: c.name, customer: c, vip, company: cd && cd.company };
   }
@@ -478,11 +504,12 @@
   async function nextCustomer() {
     if (G.customersLeft <= 0) {
       if (G.extraCust > 0) { G.extraCust--; G.customersLeft++; UI.toast('🥫 O energético te deu gás para mais um cliente!', 'good'); }
+      else if (BOSS.dayHasBoss(G.day) && G.bossDone !== G.day) return bossCustomer();
       else return endDay();
     }
     G.customersLeft--;
     // briga na fila: dois clientes chegam juntos
-    if (!(G.queue && G.queue.length) && G.day >= 2 && G.customersLeft >= 1 && (G.eventsToday || 0) < 2 && Math.random() < .08 * ((G.event && G.event.fightMult) || 1)) {
+    if (!(G.queue && G.queue.length) && G.day >= 2 && G.customersLeft >= 1 && (G.eventsToday || 0) < 3 && Math.random() < .12 * ((G.event && G.event.fightMult) || 1)) {
       const a = chooseCustomer(), b = chooseCustomer();
       G.eventsToday = (G.eventsToday || 0) + 1;
       const r = await FIGHTS.run('fila', { pair: [a, b] });
@@ -508,31 +535,26 @@
     let price = job.price;
     const haggleChance = Math.max(.1, Math.min(.95, .82 - c.haggle * .7 + G.rep * .04 + mod('haggle')));
     await VN.say(c.name, `Quanto fica? Eu posso pagar <b>${UI.money(price)}</b>.`, { expr: 'neutral' });
-    let decided = false, accepted = false, negotiated = false;
+    let decided = false, accepted = false, negotiated = false, delegate = false;
     while (!decided) {
+      const tl = TEAM.jobsLeft();
       const ch = await VN.choose([
         { label: `Aceitar o serviço`, sub: `${UI.money(price)} — ${job.name}`, value: 'ok' },
-        { label: 'Negociar (+30%)', sub: `chance ~${Math.round(haggleChance * 100)}%`, value: 'hag', disabled: negotiated },
+        { label: '💬 Negociar o preço (digitando)', sub: negotiated ? 'já negociou' : 'convença o cliente a pagar mais', value: 'hag', disabled: negotiated },
+        ...(tl > 0 ? [{ label: `🧑‍🔧 Passar pro aprendiz (${TEAM.hired.name})`, sub: `habilidade ${Math.round(TEAM.hired.skill)} · conserto automático, recebe 92%`, value: 'apr' }] : []),
         { label: '🎒 Usar item da mochila', sub: 'café, cola, revista...', value: 'bag' },
         { label: 'Recusar', sub: 'o cliente vai embora', value: 'no' },
       ]);
       if (ch === 'ok') { decided = accepted = true; }
       else if (ch === 'no') { decided = true; }
       else if (ch === 'bag') { await new Promise(r => openBag(r)); }
+      else if (ch === 'apr') { decided = accepted = delegate = true; }
       else {
         negotiated = true;
-        if (Math.random() < haggleChance) {
-          price = round5(price * 1.3);
-          AUDIO.sfx('confirm2'); META.bump('haggles'); missionProgress('haggles');
-          await VN.say(c.name, `Hmm... tá bom, ${UI.money(price)}. Mas capricha!`, { expr: 'smug' });
-        } else if (Math.random() < .5) {
-          AUDIO.sfx('error');
-          await VN.say(c.name, 'Quê?! Que absurdo! Vou procurar outra loja!', { expr: 'angry' });
-          repLoss(.15);
-          decided = true;
-        } else {
-          await VN.say(c.name, `Nem pensar. É ${UI.money(price)} ou nada.`, { expr: 'angry' });
-        }
+        const hr = await FIGHTS.haggle(c, { price, name: job.name });
+        VN.speaker = SHOP.sprite;
+        if (hr.price) { price = hr.price; decided = accepted = true; AUDIO.sfx('confirm2'); }
+        else { AUDIO.sfx('error'); repLoss(.1); decided = true; }
       }
     }
     if (!accepted) {
@@ -541,11 +563,45 @@
       return nextCustomer();
     }
     job.price = price;
+    if (delegate) {
+      job.price = round5(price * .92); job.apprentice = true;
+      const t = TEAM.hired;
+      await VN.say('', `Enquanto você cuida do balcão, <b>${t.name}</b> leva o ${job.name} pra bancada dos fundos...`);
+      const res = TEAM.delegate(job);
+      await wait(.4); VN.hide();
+      return afterRepair(c, job, res);
+    }
     await VN.say(c.name, pick(['Tá bom! Deixo com você.', 'Confio em você!', 'Vou esperar aqui, tá?', 'Por favor, cuida bem dele!']), { expr: 'smile' });
     VN.hide();
     UI.flash('#fff', .6);
     ENGINE.use('repair');
     REPAIR.start(job, res => afterRepair(c, job, res));
+  }
+
+  // ---------- CLIENTE LENDÁRIO (a cada 5 dias, no fim do expediente) ----------
+  function retarget(job, model) {
+    const d = REPAIR.DEVICES[model]; job.model = model; job.name = d.name; job.type = d.type;
+    const faults = REPAIR.faultsFor(model); const hard = faults.filter(f => ['chip', 'water', 'screen', 'battery'].includes(f));
+    job.fault = pick(hard.length ? hard : faults); job.symptom = pick(REPAIR.symptomsFor(job.fault, d.type));
+    job.price = round5(REPAIR.FAULTS[job.fault].base * d.value * (1 + (G.day - 1) * .07) * 3.4);
+  }
+  async function bossCustomer() {
+    const b = BOSS.pick(G.day); G.bossDone = G.day;
+    const job = makeJob(b); retarget(job, pick(b.devices)); job.boss = true; job.vip = false; job.company = null;
+    UI.bigText('CLIENTE LENDÁRIO!', '#ffd23f'); AUDIO.sfx('jackpot');
+    await SHOP.showCustomer(b);
+    await VN.say(`${b.name} — ${b.title}`, b.greet[0], { expr: 'smug' });
+    await VN.say(b.name, `Meu <i>${job.name}</i>. ${job.symptom} Pago <b>${UI.money(job.price)}</b>. Se ficar impecável, tem um prêmio a mais.`, { expr: 'neutral' });
+    let price = job.price, go = null;
+    while (!go) {
+      const ch = await VN.choose([{ label: 'Aceitar o desafio', sub: UI.money(price), value: 'ok' }, { label: '💬 Negociar o preço (digitando)', value: 'hag', disabled: price !== job.price }, { label: 'Recusar', sub: '−reputação', value: 'no' }]);
+      if (ch === 'hag') { const hr = await FIGHTS.haggle(b, { price, name: job.name }); VN.speaker = SHOP.sprite; if (hr.price) { price = hr.price; go = 'ok'; } else go = 'no'; }
+      else go = ch;
+    }
+    if (go === 'no') { await VN.say(b.name, pick(b.angry), { expr: 'angry' }); repLoss(.3); await SHOP.leaveCustomer(-1); VN.hide(); return endDay(); }
+    job.price = price;
+    VN.hide(); UI.flash('#fff', .6); ENGINE.use('repair');
+    REPAIR.start(job, res => afterRepair(b, job, res));
   }
 
   function repLoss(v) { G.rep = Math.max(0, G.rep - v * (1 - Math.min(1, mod('repLossMult')))); updateHUD(); }
@@ -595,7 +651,7 @@
       } else {
         await VN.say(c.name, pick(c.angry), { expr: 'sad' });
         repLoss(.3);
-        if (Math.random() < .7) G.grudges.push({ id: c.id, model: job.model, name: job.name, price: job.price });
+        if (Math.random() < .7 && !mod('noGrudge') && !c.boss) G.grudges.push({ id: c.id, model: job.model, name: job.name, price: job.price });
       }
       pay = Math.round(pay * payFrac);
       if (pay > 0) { GAME.addMoney(pay); G.log.gross += pay; AUDIO.sfx('cash'); }
@@ -606,7 +662,12 @@
       if (c.id === 'cida' && Math.random() < .5 && res.integ >= 70) { await VN.say(c.name, 'Toma, meu filho, um bolinho! E um trocadinho pro cafezinho.', { expr: 'happy' }); GAME.addMoney(15); }
       if (c.id === 'luna' && Math.random() < .6) await VN.say(c.name, 'Hoje à noite... vá ao cassino. Ou não. As cartas estão confusas.', { expr: 'smug' });
       if (Math.random() < .12) { const it = pick(META.ITEMS.filter(i => i.price <= 30)).id; addItem(it); await VN.say(c.name, `Ah, e toma isso aqui, sobrou na minha bolsa: ${META.ITM[it].emoji} <b>${META.ITM[it].name}</b>!`, { expr: 'smile' }); }
-      xpGain = Math.round((12 + job.price / 12) * (0.4 + q * .6) * (1 + mod('xpMult')) * (job.vip ? 1.5 : 1));
+      xpGain = Math.round((12 + job.price / 12) * (0.4 + q * .6) * (1 + mod('xpMult')) * (job.vip ? 1.5 : 1) * (job.apprentice ? .4 : 1));
+      if (job.apprentice) await VN.say('', `🧑‍🔧 ${TEAM.hired ? TEAM.hired.name : 'O aprendiz'} terminou o conserto (qualidade ${res.integ}%). Habilidade agora: <b>${TEAM.hired ? Math.round(TEAM.hired.skill) : '?'}</b>.`);
+      if (job.boss) {
+        if (res.integ >= 85) { META.bump('bossWins'); const gift = GAME.giftUpgrade(); RIVAL.share(.04); AUDIO.sfx('victory'); await VN.say(c.name, `${pick(c.thanks)} Tome, um presente: <b>${gift}</b>.`, { expr: 'happy' }); }
+        else if (res.integ < 70) { repLoss(.4); await VN.say(c.name, 'Esperava mais do técnico mais falado do bairro.', { expr: 'sad' }); }
+      }
     } else if (res.reason === 'destroyed') {
       const ind = Math.round(job.price * .6 * (1 - Math.min(.9, mod('indemnity'))));
       G.combo = 0; G.dayQuality.push(0);
@@ -825,6 +886,7 @@
     let interest = 0;
     if (mod('interest') > 0 && G.money > 0) { interest = Math.min(500, Math.round(G.money * mod('interest'))); GAME.addMoney(interest, true); }
     const extraRows = [...ECON.closeDay(G.log), ...EVENTS.contractsEndDay()];
+    if (TEAM.hired) { const sal = Math.min(TEAM.hired.salary, Math.max(0, G.money - 1)); GAME.addMoney(-sal, true); extraRows.push([`Salário do aprendiz (${TEAM.hired.name})`, -sal]); }
     if (G.dayQuality.length && G.dayQuality.every(q => q >= 90)) META.bump('cleanDays');
     META.clear('day');
     AUDIO.sfx(G.money > 0 ? 'cash' : 'fail');
@@ -854,7 +916,7 @@
     await new Promise(r => s.querySelector('#e-go').onclick = r);
     AUDIO.sfx('click'); UI.closeScreen();
     if (checkBroke('O aluguel e as contas levaram tudo o que você tinha...')) return;
-    if (G.money >= GOAL && !G.won) { G.won = true; return victory(); }
+    if (G.money >= GOAL && !G.won) { G.won = true; if (!STORY.state().done) { AUDIO.sfx('victory'); UI.bigText(UI.money(GOAL) + '!', '#ffe066'); UI.toast(`🏠 Você juntou ${UI.money(GOAL)}! Guarde até o <b>leilão do dia ${STORY.FINAL_DAY}</b> — a Dona Olga quer no mínimo isso.`, 'gold'); } }
     nightChoiceOrDay(false);
   }
 
@@ -874,6 +936,9 @@
       <button class="btn purple" id="n-store" style="font-size:15px">🏪 Lojinha da esquina</button>
       <button class="btn gold" id="n-bank" style="font-size:15px">🏦 Banco do Bairro</button>
       <button class="btn green" id="n-cat" style="font-size:15px">🛋️ Catálogo Decora+</button>
+      ${RIVAL.active() ? '<button class="btn red" id="n-rival" style="font-size:15px">📣 Contra-ataque</button>' : ''}
+      ${TEAM.hired || STORY.state().reno ? '<button class="btn" id="n-team" style="font-size:15px">🧑‍🔧 Equipe</button>' : ''}
+      ${STORY.state().reno ? '<button class="btn gold" id="n-reno" style="font-size:15px">🏗️ Reforma</button>' : ''}
       <button class="btn" id="n-sleep" style="font-size:15px;background:#6c8cff;box-shadow:0 4px 0 #3a0ca3,0 0 0 3px #6c8cff">😴 Só dormir</button>
     </div>`, 'dim');
     s.querySelector('#n-cas').onclick = () => { AUDIO.sfx('confirm'); UI.closeScreen(); goCasino(); };
@@ -882,6 +947,9 @@
     s.querySelector('#n-bank').onclick = () => ECON.openBank(() => nightChoiceOrDay(false));
     s.querySelector('#n-cat').onclick = () => DECOR.openCatalog(() => nightChoiceOrDay(false));
     s.querySelector('#n-sleep').onclick = () => { AUDIO.sfx('click'); sleep(); };
+    const nr = s.querySelector('#n-rival'); if (nr) nr.onclick = () => { AUDIO.sfx('open'); RIVAL.openCounter(() => nightChoiceOrDay(false)); };
+    const nt = s.querySelector('#n-team'); if (nt) nt.onclick = () => { AUDIO.sfx('open'); TEAM.openManage(() => nightChoiceOrDay(false)); };
+    const nn = s.querySelector('#n-reno'); if (nn) nn.onclick = () => { AUDIO.sfx('open'); RENO.open(() => nightChoiceOrDay(false)); };
   }
 
   async function sleep() {

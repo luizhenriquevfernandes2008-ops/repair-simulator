@@ -388,7 +388,7 @@ table.sum td:last-child { text-align: right; font-weight: 800; }
 .chat-foot .mini-btn { width: auto; margin: 0; padding: 3px 10px; }
 
 /* minigames */
-.mini { position: fixed; inset: 0; z-index: 55; background: rgba(20,5,20,.35); cursor: crosshair; }
+.mg-overlay { position: fixed; inset: 0; z-index: 55; background: rgba(20,5,20,.35); cursor: crosshair; }
 .mini-head { position: absolute; top: 14px; left: 50%; transform: translateX(-50%); background: rgba(255,255,255,.95); border: 3px solid #ffb703; border-radius: 999px; padding: 6px 20px; font: 700 22px var(--f-title); color: var(--ink); display: flex; gap: 16px; white-space: nowrap; }
 .mini-target { position: absolute; left: 0; top: 0; cursor: pointer; filter: drop-shadow(0 6px 8px rgba(0,0,0,.4)); user-select: none; -webkit-user-drag: none; }
 .mini-target.hit { animation: minihit .25s; }
@@ -399,3 +399,51 @@ table.sum td:last-child { text-align: right; font-weight: 800; }
 .mini-word span.ok { color: #1b7a3a; }
 .mini-word span.bad { color: #e63946; }
 .mini-in { font: 700 28px var(--f-title); text-transform: uppercase; text-align: center; width: 260px; padding: 6px; border: 3px solid #ff7b00; border-radius: 12px; outline: none; margin-top: 8px; user-select: text; }
+
+/* ================= v1.4 — história, rival, cutscenes ================= */
+#letterbox { position: fixed; inset: 0; pointer-events: none; z-index: 29; }
+#letterbox div { position: absolute; left: 0; right: 0; height: 0; background: #000; transition: height .6s ease; }
+#letterbox div:first-child { top: 0; } #letterbox div:last-child { bottom: 0; }
+#letterbox.on div { height: 9vh; }
+#cut-skip { position: fixed; right: 16px; top: 14px; z-index: 36; background: rgba(0,0,0,.55); color: #fff; border: 2px solid #fff; border-radius: 999px; padding: 5px 14px; font: 700 14px var(--f-title); cursor: pointer; }
+#cut-skip.on { background: var(--pink3); }
+.chapter-card { position: fixed; inset: 0; z-index: 80; background: radial-gradient(circle at 50% 45%, #2b0f2f, #07030a 70%); color: #fff; display: flex; flex-direction: column; align-items: center; justify-content: center; animation: cardIn .8s both; cursor: pointer; }
+.chapter-card small { font: 700 16px var(--f-title); letter-spacing: 6px; text-transform: uppercase; color: var(--pink2); }
+.chapter-card h1 { font: 700 clamp(40px, 7vw, 86px)/1 var(--f-title); margin: 10px 0; text-shadow: 0 0 22px var(--neon1); }
+.chapter-card p { font: 700 clamp(22px, 3vw, 34px) var(--f-title); color: #ffe066; margin: 0; }
+.chapter-card.out { animation: cardOut .6s forwards; }
+@keyframes cardIn { from { opacity: 0; transform: scale(1.05); } }
+@keyframes cardOut { to { opacity: 0; } }
+.cut-fade { position: fixed; inset: 0; z-index: 79; pointer-events: none; animation: cutfade 1.2s ease-in-out forwards; }
+@keyframes cutfade { 0% { opacity: 0; } 50% { opacity: 1; } 100% { opacity: 0; } }
+.cut-letter { position: fixed; inset: 0; z-index: 78; background: rgba(20,5,20,.55); display: flex; align-items: center; justify-content: center; cursor: pointer; animation: cardIn .5s; }
+.paper-letter { background: #fffaf0; border: 2px solid #d4b483; border-radius: 6px; padding: 26px 34px; max-width: min(560px, 90vw); font: italic 19px/1.5 Georgia, 'Times New Roman', serif; color: #3b2a1a; transform: rotate(-1.5deg); box-shadow: 0 16px 40px rgba(0,0,0,.45); }
+.paper-letter p { margin: 8px 0; }
+.letter-next { font: 700 13px var(--f-title); color: var(--pink3); text-align: right; margin-top: 12px; }
+#call-frame { position: fixed; left: 50%; top: 9vh; transform: translateX(-50%); width: min(460px, 70vw); height: 66vh; border: 10px solid #1b1b1f; border-radius: 34px; z-index: 27; pointer-events: none; box-shadow: 0 0 0 4px #444, 0 20px 50px rgba(0,0,0,.5); }
+.call-top { background: #1b1b1f; color: #fff; font: 700 14px var(--f-title); padding: 6px 12px; border-radius: 20px 20px 0 0; }
+.call-top .rec { color: #ff4d6d; float: right; }
+.share-big { display: flex; align-items: center; gap: 10px; justify-content: center; font: 700 16px var(--f-title); margin: 6px 0; }
+.share-bar { width: 360px; height: 18px; border-radius: 10px; background: linear-gradient(90deg, #29a3ff, #29f3ff); overflow: hidden; border: 3px solid #fff; box-shadow: 0 0 0 2px #29a3ff; }
+.share-bar div { height: 100%; background: linear-gradient(90deg, #ff8fc8, #e05aa0); }
+.counter-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; margin: 10px 0; }
+.counter-card { background: #fff7fb; border: 3px solid #f3c6dd; border-radius: 14px; padding: 10px; display: flex; flex-direction: column; align-items: center; gap: 3px; cursor: pointer; font-family: var(--f-text); color: var(--ink); }
+.counter-card:hover:not(:disabled) { border-color: var(--pink3); transform: translateY(-3px); }
+.counter-card:disabled { opacity: .45; cursor: default; }
+.counter-card .ico { font-size: 34px; } .counter-card b { font: 700 15px var(--f-title); } .counter-card small { font-size: 12px; } .counter-card em { font: 700 15px var(--f-title); color: #1b7a3a; font-style: normal; }
+.reno-list { display: flex; flex-direction: column; gap: 10px; margin: 10px 0; }
+.reno { display: flex; flex-direction: column; align-items: center; background: #fffbe6; border: 3px solid #ffd166; border-radius: 14px; padding: 10px; }
+.reno.done { background: #f3fff7; border-color: #52d68a; }
+.reno b { font: 700 18px var(--f-title); } .reno small { font-size: 13px; }
+.ending-card { max-width: 720px; }
+.ending-card.good { border-color: #ffc300; box-shadow: 0 0 0 5px #fff, 0 0 40px rgba(255,195,0,.7); }
+.ending-card .end-emoji { font-size: 70px; line-height: 1; }
+.ending-card small { font: 700 14px var(--f-title); letter-spacing: 4px; text-transform: uppercase; color: var(--pink3); }
+.credits-roll { position: fixed; inset: 0; z-index: 90; background: #07030a; color: #fff; overflow: hidden; }
+.credits-roll .roll { position: absolute; left: 50%; transform: translateX(-50%); width: min(640px, 90vw); text-align: center; animation: roll 60s linear forwards; top: 100%; }
+.credits-roll h1 { font: 700 44px var(--f-title); color: var(--pink2); } .credits-roll h2 { font: 700 22px var(--f-title); color: #ffe066; margin-top: 40px; }
+.credits-roll p { margin: 4px 0; font-size: 15px; opacity: .9; }
+.credits-roll .btn { position: absolute; right: 20px; bottom: 20px; }
+@keyframes roll { to { transform: translate(-50%, -100%); top: 0; } }
+.chat-badge { font: 700 16px var(--f-title); background: #fffbe6; border: 2px solid #ffc300; border-radius: 999px; padding: 2px 12px; align-self: center; }
+.meter-lbl { font: 700 11px var(--f-title); opacity: .6; text-transform: uppercase; }
