@@ -9,22 +9,9 @@
   const GOAL = 10000;
   const mod = k => META.mod(k);
 
-  const EVENTS = [
-    { id: 'quiet', txt: 'Dia tranquilo. Nada de especial.', w: 4 },
-    { id: 'promo', txt: 'Promoção do fornecedor! Peças 40% mais baratas hoje.', partsMult: 0.6, w: 2 },
-    { id: 'rain', txt: 'Dia chuvoso... 1 cliente a menos, mas pagam 25% a mais.', cust: -1, payMult: 1.25, w: 2 },
-    { id: 'viral', txt: 'Seu conserto viralizou nas redes! +2 clientes hoje.', cust: 2, w: 1.5 },
-    { id: 'fiscal', txt: 'O fiscal da prefeitura passou... multa de R$ 40.', money: -40, fine: true, w: 1 },
-    { id: 'pipe', txt: 'Cano estourado na loja! O encanador cobrou R$ 60.', money: -60, fine: true, w: 1 },
-    { id: 'moon', txt: 'Lua cheia hoje... dizem que a sorte está no ar (+15% nos prêmios do cassino).', casino: 1.15, w: 1.5 },
-    { id: 'coffee', txt: 'Você passou um café cheiroso! Gorjetas +30% hoje.', tip: 1.3, w: 1.5 },
-    { id: 'rich', txt: 'Um evento de gente rica no bairro! Clientes pagam +30%.', payMult: 1.3, w: 1.2 },
-    { id: 'gift', txt: 'Um fornecedor deixou uma caixa de peças de brinde!', gift: true, w: 1 },
-    { id: 'sale', txt: 'Liquidação na lojinha da Tati! Tudo 30% mais barato hoje.', storeSale: .3, w: 1.2 },
-  ];
-
   // ---------- estado ----------
   let G = null;
+  function newLog() { return { income: 0, gross: 0, parts: 0, casino: 0, rent: 0, tips: 0, events: 0, bills: 0, tax: 0, loan: 0 }; }
   function fresh() {
     return {
       day: 0, money: START_MONEY + mod('startMoney'), rep: 2.5, upgrades: [], stock: Object.fromEntries(Object.keys(REPAIR.PARTS).map(k => [k, 0])),
@@ -32,6 +19,9 @@
       visits: {}, tickets: [], event: null, customersLeft: 0, hour: 9, log: null, won: false,
       bag: {}, buffs: [], xp: 0, level: 1, combo: 0, freeSpins: 0, store: null, mission: null, secondUsed: false, extraCust: 0,
       dayQuality: [], served: [],
+      // v1.3
+      bank: { savings: 0, loan: null, agiota: null, dirty: 0, metAgiota: false }, market: 1, marketHist: [1],
+      decor: { owned: [], placed: {}, broken: [], petDay: 0 }, reviews: [], dayReviews: [], contracts: [], grudges: [], eventsToday: 0, queue: [], queueDiscount: {}, vipNext: false,
     };
   }
   function normalize(s) { // saves antigos
@@ -39,6 +29,10 @@
     for (const k of Object.keys(f)) if (s[k] === undefined) s[k] = f[k];
     s.stock = Object.assign(f.stock, s.stock || {});
     s.upgrades = (s.upgrades || []).filter(id => META.UPG[id]);
+    s.bank = Object.assign(f.bank, s.bank || {});
+    s.decor = Object.assign(f.decor, s.decor || {});
+    if (s.log) s.log = Object.assign(newLog(), s.log);
+    if (s.event && !s.event.head && window.EVENTS) s.event = EVENTS.DAILY.find(e => e.id === s.event.id) || EVENTS.DAILY[0];
     return s;
   }
 
@@ -46,7 +40,14 @@
     get state() { return G; },
     mod,
     hasUpgrade(id) { return !!G && G.upgrades.includes(id); },
-    luck() { return mod('luck') + (G && G.event && G.event.casino ? 0.5 : 0); },
+    // sorte com retorno decrescente (muitos bônus somados não quebram o cassino)
+    luck() { return ECON.luckEff(mod('luck') + (G && G.event && G.event.casino ? 0.5 : 0)); },
+    refreshHUD() { updateHUD(); },
+    repChange(v) { if (v >= 0) repGain(v); else repLoss(-v); },
+    missionProgress(stat, v) { missionProgress(stat, v); },
+    addItem(id, n) { addItem(id, n); },
+    gainXP(v) { return gainXP(v); },
+    warrantyRepair(c, prev) { return warrantyRepair(c, prev); },
     payMult() { return (1 + mod('casinoPay')) * (G && G.event && G.event.casino ? G.event.casino : 1); },
     addMoney(v, silent) {
       G.money = Math.round(G.money + v);
@@ -58,7 +59,7 @@
     consumePart(part, job) {
       job.lastPartCost = 0;
       if (G.stock[part] > 0) { G.stock[part]--; UI.toast(`Peça do estoque: <b>${REPAIR.PARTS[part].name}</b> (restam ${G.stock[part]})`, 'good'); return true; }
-      const mult = ((G.event && G.event.partsMult) || 1) * (1 - Math.min(.6, mod('partsEmergency')));
+      const mult = ((G.event && G.event.partsMult) || 1) * (1 - Math.min(.6, mod('partsEmergency'))) * ECON.partMult();
       const price = Math.round(REPAIR.PARTS[part].cost * 1.5 * mult * (job.type === 'tablet' && part === 'screen' ? 1.6 : 1));
       if (G.money - price <= 0) return false;
       G.money -= price; G.log.parts += price; updateHUD(-price);
@@ -123,13 +124,16 @@
     const st = Math.round(G.rep);
     $('#hud-rep').textContent = '★'.repeat(st) + '☆'.repeat(5 - st);
     $('#hud-rent').textContent = 'Aluguel hoje: ' + UI.money(rentFor(G.day));
+    const bk = $('#hud-bank'); const sv = (G.bank && G.bank.savings) || 0; const debt = (G.bank && ((G.bank.loan && G.bank.loan.left) || 0) + ((G.bank.agiota && G.bank.agiota.debt) || 0)) || 0;
+    bk.classList.toggle('hidden', !sv && !debt);
+    bk.innerHTML = (sv ? `🐷 ${UI.money(sv)}` : '') + (debt ? ` <span style="color:#c1121f">📄 −${UI.money(debt)}</span>` : '');
     $('#hud-lvl').innerHTML = `Nv ${G.level}<div class="xpbar"><div style="width:${Math.min(100, G.xp / xpNeed(G.level) * 100)}%"></div></div>`;
     const c = $('#hud-combo'); c.textContent = G.combo >= 2 ? `🔥 Combo x${G.combo}` : ''; c.classList.toggle('hidden', G.combo < 2);
     const bagN = Object.values(G.bag).reduce((a, b) => a + b, 0);
     $('#btn-bag').innerHTML = `🎒<small>${bagN || ''}</small>`;
     META.renderBuffs();
   }
-  function rentFor(day) { return Math.round(40 * Math.pow(1.17, Math.max(0, day - 1)) * (1 - Math.min(.6, mod('rentMult')))); }
+  function rentFor(day) { return ECON.rent(day); }
   function hud(on) { $('#hud').classList.toggle('hidden', !on); $('#hud-buffs').classList.toggle('hidden', !on); }
 
   // ---------- cena de título ----------
@@ -178,10 +182,19 @@
     const q = new URLSearchParams(location.search);
     if (q.get('test')) {
       $('#loading').remove();
-      G = fresh(); G.day = 1; G.money = +(q.get('money') || 500); G.log = { income: 0, parts: 0, casino: 0, rent: 0, tips: 0 }; G.event = EVENTS[0]; G.served = [];
+      G = fresh(); G.day = +(q.get('day') || 1); G.money = +(q.get('money') || 500); G.log = newLog(); G.event = EVENTS.DAILY[0]; G.served = [];
       if (q.get('items')) q.get('items').split(',').forEach(id => G.bag[id] = (G.bag[id] || 0) + 1);
+      if (q.get('decor')) q.get('decor').split(',').forEach(id => { const d = DECOR.DEC[id]; if (!d) return; G.decor.owned.push(id); const sl = Object.keys(DECOR.SLOTS).find(k => DECOR.SLOTS[k].type === d.type && !G.decor.placed[k]); if (sl) G.decor.placed[sl] = id; });
+      DECOR.apply();
       hud(true); updateHUD();
       const t = q.get('test');
+      window.__G = () => G;
+      if (t === 'fight') { ENGINE.use('shop'); SHOP.setTime(11); AUDIO.music('shop'); const k = q.get('kind') || 'reclamacao'; const c = CHARS.ROSTER.find(x => x.id === q.get('char')) || CHARS.ROSTER[1]; const pair = [CHARS.ROSTER[0], CHARS.ROSTER[7]]; if (k === 'agiota') { G.bank.agiota = { debt: 600, due: 1, took: 400 }; } FIGHTS.run(k, { char: c, pair, job: { price: 200, name: 'Galáxia S9' }, prev: null, debt: 600 }).then(r => { window.__fight = r; console.log('FIGHT', JSON.stringify(r)); }); return; }
+      if (t === 'event') { ENGINE.use('shop'); SHOP.setTime(11); AUDIO.music('shop'); const ev = [...EVENTS.MID, ...EVENTS.NIGHT].find(e => e.id === q.get('id')); EVENTS.runEvent(ev).then(() => { window.__event = 'done'; console.log('EVENT done'); }); return; }
+      if (t === 'catalog') { ENGINE.use('shop'); SHOP.setTime(11); DECOR.openCatalog(() => { }); return; }
+      if (t === 'bank') { ENGINE.use('shop'); SHOP.setTime(11); ECON.openBank(() => { }); return; }
+      if (t === 'day') { G.day = +(q.get('day') || 1) - 1; startDay(); return; }
+      if (t === 'endday') { ENGINE.use('shop'); G.log.income = 600; G.log.gross = 520; endDay(); return; }
       if (t === 'repair') {
         const c = CHARS.ROSTER[0]; const job = makeJob(c);
         if (q.get('dev')) { job.model = q.get('dev'); const d = REPAIR.DEVICES[job.model]; job.name = d.name; job.type = d.type; }
@@ -242,7 +255,7 @@
       <div class="title-foot">${best ? `Recorde: dia ${best} · ` : ''}Relíquias ativas: ${achN} · Modelos 3D: poly.pizza · Sons: Kenney · Música: Kevin MacLeod</div>`, '');
     s.style.background = 'transparent';
     $('#m-new').onclick = () => { AUDIO.sfx('confirm'); newGame(); };
-    $('#m-cont').onclick = () => { if (save) { AUDIO.sfx('confirm'); G = normalize(save); hud(true); nightChoiceOrDay(true); } };
+    $('#m-cont').onclick = () => { if (save) { AUDIO.sfx('confirm'); G = normalize(save); DECOR.apply(); hud(true); nightChoiceOrDay(true); } };
     $('#m-col').onclick = () => { AUDIO.sfx('open'); collection(); };
     $('#m-how').onclick = () => { AUDIO.sfx('open'); howTo(); };
     $('#m-cred').onclick = () => { AUDIO.sfx('open'); credits(); };
@@ -256,7 +269,10 @@
       <p>☀️ <b>De dia</b> você atende clientes. Ouça o problema, negocie o preço e conserte o aparelho na bancada 3D. Consertos dão <b>XP</b>: a cada nível você escolhe <b>1 de 3 melhorias</b> aleatórias.</p>
       <p>🔧 <b>No conserto</b>: tire os parafusos (segure o clique), aqueça a cola, abra, <b>meça os pontos de teste</b> para achar o defeito real, <b>desconecte a bateria</b>, troque a peça e remonte. Teclas <b>1–9</b> trocam de ferramenta. Consertos perfeitos seguidos formam <b>combo</b> 🔥.</p>
       <p>🏪 <b>Lojinha da esquina</b>: a Tati vende itens que mudam todo dia (café, cola, raspadinha, trevo, cigarro...). Eles vão para a <b>mochila</b> 🎒 (tecla <b>I</b>). O cigarro só pode ser fumado no cassino e dá sorte.</p>
-      <p>🌙 <b>À noite</b>, depois do aluguel (que sobe todo dia!): <b>cassino</b> ou <b>loja de melhorias</b>. A lojinha não gasta a noite.</p>
+      <p>😡 <b>Brigas</b>: clientes irritados, gente brigando na fila, a vizinha, o fiscal, o agiota... <b>Digite</b> o que você quer dizer. Cada um tem personalidade: desculpas, empatia, ofertas ("te dou 20%"), piadas e cantadas funcionam (ou não) de jeitos diferentes. Xingar só piora!</p>
+      <p>📰 <b>Eventos</b>: todo dia sai a Gazeta do Bairro. No meio do expediente acontecem coisas (assalto, rato, carteira perdida, incêndio, contratos...) — algumas com minigame.</p>
+      <p>🛋️ <b>Catálogo Decora+</b>: móveis, plantas, máquinas e mascotes aparecem na loja, dão bônus e somam <b>estilo</b>. 🏦 <b>Banco</b>: poupança protegida (rende 1%/dia), empréstimo e o agiota Jorjão.</p>
+      <p>🌙 <b>À noite</b>, depois do aluguel, contas e impostos: <b>cassino</b> ou <b>loja de melhorias</b>. Lojinha, banco e catálogo não gastam a noite.</p>
       <p>🏆 <b>Conquistas</b> liberam <b>relíquias permanentes</b>: elas continuam valendo em todas as partidas, mesmo depois de falir.</p>
       <p>💀 <b>Se o dinheiro acabar, o jogo acaba.</b> Meta: ${UI.money(GOAL)}.</p>
       <div style="text-align:center"><button class="btn" id="hw-ok">Entendi!</button></div></div>`);
@@ -327,6 +343,7 @@
   async function newGame() {
     G = fresh();
     UI.closeScreen();
+    DECOR.apply();
     ENGINE.use('shop'); SHOP.setTime(8.5); hud(false);
     AUDIO.music('shop');
     VN.speaker = null;
@@ -340,14 +357,6 @@
     startDay();
   }
 
-  function rollEvent() {
-    if (G.day === 1) return EVENTS[0];
-    const pool = EVENTS.filter(e => !(e.fine && mod('noFines')));
-    const tot = pool.reduce((a, e) => a + e.w, 0); let r = Math.random() * tot;
-    for (const e of pool) { r -= e.w; if (r <= 0) return e; }
-    return pool[0];
-  }
-
   function newMission() {
     const t = pick(META.MISSIONS);
     const goal = t.goal === 'X' ? round5(150 + G.day * 45) : t.goal;
@@ -359,18 +368,19 @@
     ms.v += v;
     if (ms.v >= ms.goal) {
       ms.done = true; AUDIO.sfx('victory');
-      addItem(ms.rewardItem); GAME.addMoney(ms.rewardMoney, true);
+      addItem(ms.rewardItem); GAME.addMoney(ms.rewardMoney, true); if (G.log) G.log.events += ms.rewardMoney;
       UI.toast(`🎯 <b>Missão do dia cumprida!</b><br>+${UI.money(ms.rewardMoney)} e ${META.ITM[ms.rewardItem].emoji} ${META.ITM[ms.rewardItem].name}`, 'gold');
     }
   }
 
   async function startDay() {
-    VN.hide();
+    VN.hide(); FIGHTS.closeChat();
     G.day++; G.hour = 9;
     META.bump('bestDay', G.day, 'max');
-    G.event = rollEvent();
-    G.log = { income: 0, parts: 0, casino: 0, rent: 0, tips: 0 };
-    G.dayQuality = [];
+    G.event = EVENTS.rollDaily();
+    ECON.rollMarket();
+    G.log = newLog();
+    G.dayQuality = []; G.dayReviews = []; G.eventsToday = 0;
     G.extraCust = 0;
     let n = 3 + Math.round(mod('customers')) + (G.rep >= 4.2 ? 1 : 0) + (G.event.cust || 0);
     if (G.day === 1) n = 3;
@@ -378,49 +388,91 @@
     G.served = [];
     G.mission = newMission();
     if (!G.store || G.store.day !== G.day) G.store = null; // estoque da lojinha renova
-    ENGINE.use('shop'); SHOP.setTime(9); SHOP.hideCustomer();
+    DECOR.apply();
+    ENGINE.use('shop'); SHOP.setTime(9); SHOP.hideCustomer(); SHOP.clearExtras();
     AUDIO.music('shop');
     hud(true); updateHUD();
-    AUDIO.sfx('dayStart');
-    const s = UI.screen(`<div class="card">
-      <h1>Dia ${G.day}</h1>
-      <div class="event-card">📅 ${G.event.txt}</div>
-      <div class="event-card mission">🎯 Missão: ${G.mission.txt} <small>(prêmio: ${UI.money(G.mission.rewardMoney)} + ${META.ITM[G.mission.rewardItem].emoji})</small></div>
-      <p>Clientes esperados: <b>${G.customersLeft}</b> · Aluguel no fim do dia: <b style="color:#c1121f">${UI.money(rentFor(G.day))}</b></p>
-      <p style="font-size:14px;opacity:.8">Caixa: ${UI.money(G.money)} · Meta: ${UI.money(GOAL)} · Nível ${G.level}</p>
-      <button class="btn big" id="d-go">Abrir a loja ♥</button><br>
-      <button class="btn purple" id="d-store" style="font-size:16px">🏪 Passar na lojinha da esquina antes</button></div>`);
-    const go = await new Promise(r => { s.querySelector('#d-go').onclick = () => r('go'); s.querySelector('#d-store').onclick = () => r('store'); });
+    AUDIO.sfx('news');
+    const extra = DECOR.morning();
+    const b = G.bank;
+    if (b.agiota) extra.push(`🕶️ Dívida com o Jorjão: <b style="color:#c1121f">${UI.money(b.agiota.debt)}</b> (prazo: dia ${b.agiota.due})`);
+    if (b.loan) extra.push(`📄 Empréstimo: faltam ${UI.money(b.loan.left)}`);
+    if (b.savings) extra.push(`🐷 Poupança: ${UI.money(b.savings)}`);
+    const tr = DECOR.tier(); if (tr) extra.push(`✨ Loja <b>${tr.name}</b> (estilo ${DECOR.style()})`);
+    const menu = () => new Promise(r => {
+      const bills = rentFor(G.day) + ECON.bills(G.day);
+      const s = UI.screen(`<div class="card day-card">
+        ${EVENTS.newspaper(extra)}
+        <div class="event-card mission">🎯 Missão: ${G.mission.txt} <small>(prêmio: ${UI.money(G.mission.rewardMoney)} + ${META.ITM[G.mission.rewardItem].emoji})</small></div>
+        <p>Clientes esperados: <b>${G.customersLeft}</b> · Contas no fim do dia: <b style="color:#c1121f">${UI.money(bills)}</b> <small>(aluguel ${UI.money(rentFor(G.day))} + luz/internet ${UI.money(ECON.bills(G.day))}) + imposto sobre o faturamento</small></p>
+        <p style="font-size:14px;opacity:.8">Caixa: ${UI.money(G.money)} · Meta: ${UI.money(GOAL)} · Nível ${G.level}</p>
+        <button class="btn big" id="d-go">Abrir a loja ♥</button><br>
+        <button class="btn purple" id="d-store" style="font-size:16px">🏪 Lojinha da esquina</button>
+        <button class="btn gold" id="d-bank" style="font-size:16px">🏦 Banco do Bairro</button>
+        <button class="btn green" id="d-cat" style="font-size:16px">🛋️ Catálogo Decora+</button></div>`);
+      s.querySelector('#d-go').onclick = () => r('go');
+      s.querySelector('#d-store').onclick = () => { AUDIO.sfx('confirm'); UI.closeScreen(); visitStore(() => r('back')); };
+      s.querySelector('#d-bank').onclick = () => ECON.openBank(() => r('back'));
+      s.querySelector('#d-cat').onclick = () => DECOR.openCatalog(() => r('back'));
+    });
+    while ((await menu()) !== 'go') { ENGINE.use('shop'); SHOP.setTime(9); AUDIO.music('shop'); updateHUD(); }
     AUDIO.sfx('confirm'); UI.closeScreen();
-    if (go === 'store') { await new Promise(r => visitStore(r)); ENGINE.use('shop'); SHOP.setTime(9); AUDIO.music('shop'); }
-    if (G.event.money) { GAME.addMoney(G.event.money, true); G.log.rent += -G.event.money; if (checkBroke('A multa levou seu último centavo...')) return; }
-    if (G.event.gift) { const a = GAME.giftPart(), b = GAME.giftPart(); UI.toast(`Brinde: ${a} + ${b} no estoque!`, 'good'); }
+    if (G.event.money) { GAME.addMoney(G.event.money, true); G.log.events += G.event.money; if (checkBroke('A multa levou seu último centavo...')) return; }
+    if (G.event.gift) { const a = GAME.giftPart(), b2 = GAME.giftPart(); UI.toast(`Brinde: ${a} + ${b2} no estoque!`, 'good'); }
     if (mod('dailyPart')) { const a = GAME.giftPart(); UI.toast(`🏚️ Do depósito: +1 ${a}`, 'good'); }
+    // cobranças e visitas marcadas
+    if (b.agiota && G.day >= b.agiota.due) { await FIGHTS.run('agiota', { debt: b.agiota.debt }); if (checkBroke('O Jorjão levou tudo...')) return; }
+    if (G.event.fiscalVisit && !mod('noFines')) { await FIGHTS.run('fiscal'); if (checkBroke('A multa levou seu último centavo...')) return; }
     nextCustomer();
   }
 
   // ---------- clientes ----------
   function chooseCustomer() {
+    if (G.queue && G.queue.length) { const q = CHARS.ROSTER.find(x => x.id === G.queue.shift()); if (q) { G.served.push(q.id); return q; } }
     const pool = CHARS.ROSTER.filter(c => !G.served.includes(c.id));
     const c = pick(pool.length ? pool : CHARS.ROSTER);
     G.served.push(c.id);
     return c;
   }
   function makeJob(c) {
-    const model = pick(c.devices);
+    const cd = EVENTS.contractDevice();
+    const model = cd ? cd.model : pick(c.devices);
     const dev = REPAIR.DEVICES[model];
     const faults = REPAIR.faultsFor(model);
     let f = pick(faults);
     const easy = faults.filter(x => ['battery', 'screen', 'port', 'coin', 'button'].includes(x));
     if (G.day <= 2 && easy.length && Math.random() < .6) f = pick(easy);
+    const bias = ((G.event && G.event.faultBias) || []).filter(x => faults.includes(x));
+    if (bias.length && Math.random() < .5) f = pick(bias);
     const F = REPAIR.FAULTS[f];
     const ambiguous = ['battery', 'chip', 'water', 'port'].includes(f) && Math.random() < .35;
     const symptom = ambiguous ? pick(REPAIR.AMBIG) : pick(REPAIR.symptomsFor(f, dev.type));
     const brand = dev.name.split(' ')[0].toUpperCase();
-    const vip = G.day > 1 && Math.random() < .05 + mod('vipChance');
-    const mult = (1 + (G.day - 1) * .07) * (G.event.payMult || 1) * (0.85 + G.rep * .06) * rnd(.9, 1.12) * (vip ? 2.2 : 1);
+    const vip = !!G.vipNext || (G.day > 1 && Math.random() < .05 + mod('vipChance'));
+    G.vipNext = false;
+    const mult = (1 + (G.day - 1) * .07) * (G.event.payMult || 1) * (0.85 + G.rep * .06) * rnd(.9, 1.12) * (vip ? 2.2 : 1) * (cd ? 1.1 : 1);
     const price = round5(F.base * dev.value * c.wealth * mult);
-    return { model, name: dev.name, type: dev.type, fault: f, symptom, brand, price, customerName: c.name, customer: c, vip };
+    return { model, name: dev.name, type: dev.type, fault: f, symptom, brand, price, customerName: c.name, customer: c, vip, company: cd && cd.company };
+  }
+
+  // conserto na garantia (depois de uma reclamação): de graça, mas conta reputação e XP
+  function warrantyRepair(c, prev) {
+    return new Promise(resolve => {
+      const job = makeJob(c);
+      if (prev && REPAIR.DEVICES[prev.model]) { job.model = prev.model; const d = REPAIR.DEVICES[prev.model]; job.name = d.name; job.type = d.type; if (!REPAIR.faultsFor(prev.model).includes(job.fault)) job.fault = REPAIR.faultsFor(prev.model)[0]; }
+      job.price = 0; job.warranty = true;
+      VN.hide(); UI.flash('#fff', .6);
+      ENGINE.use('repair');
+      REPAIR.start(job, async res => {
+        await wait(.6); UI.flash('#fff', .6); ENGINE.use('shop'); AUDIO.music('shop');
+        await SHOP.showCustomer(c);
+        if (res.ok && res.integ >= 70) { repGain(.35); await VN.say(c.name, 'Agora sim! Ficou perfeito. Obrigado por honrar a garantia!', { expr: 'happy' }); EVENTS.review(c, 5, 'garantia'); await gainXP(20); }
+        else { repLoss(.4); await VN.say(c.name, 'De novo?! Nunca mais eu volto aqui!', { expr: 'angry' }); EVENTS.review(c, 1, 'garantia'); }
+        await SHOP.leaveCustomer(1); VN.hide();
+        G.hour += 1; SHOP.setTime(G.hour); updateHUD();
+        resolve();
+      });
+    });
   }
 
   async function nextCustomer() {
@@ -429,13 +481,27 @@
       else return endDay();
     }
     G.customersLeft--;
+    // briga na fila: dois clientes chegam juntos
+    if (!(G.queue && G.queue.length) && G.day >= 2 && G.customersLeft >= 1 && (G.eventsToday || 0) < 2 && Math.random() < .08 * ((G.event && G.event.fightMult) || 1)) {
+      const a = chooseCustomer(), b = chooseCustomer();
+      G.eventsToday = (G.eventsToday || 0) + 1;
+      const r = await FIGHTS.run('fila', { pair: [a, b] });
+      const firstC = [a, b].find(x => x.id === r.first) || a, other = firstC === a ? b : a;
+      G.queueDiscount = {}; (r.discountFor || []).forEach(d => G.queueDiscount[d.id] = d.pct);
+      if (r.lost === 2) { G.customersLeft = Math.max(0, G.customersLeft - 1); G.hour += .5; SHOP.setTime(G.hour); updateHUD(); if (checkBroke('')) return; return nextCustomer(); }
+      if (r.lost === 1) { G.queue = [firstC.id]; G.customersLeft = Math.max(0, G.customersLeft - 1); }
+      else G.queue = [firstC.id, other.id];
+    }
     const c = chooseCustomer();
     const job = makeJob(c);
+    const qd = G.queueDiscount && G.queueDiscount[c.id]; if (qd) { job.price = round5(job.price * (1 - Math.min(100, qd) / 100)); delete G.queueDiscount[c.id]; }
     const visits = G.visits[c.id] || 0;
     await SHOP.showCustomer(c);
     if (job.vip) { AUDIO.sfx('bigWin', { vol: .5 }); UI.toast(`👑 <b>Cliente VIP!</b> ${c.name} paga 2,2x mais.`, 'gold'); }
     const greet = visits === 0 ? c.greet[0] : pick(c.greet.slice(1));
     await VN.say(c.name + (job.vip ? ' 👑' : ''), greet, { expr: visits ? 'smile' : (c.id === 'mei' ? 'angry' : 'neutral') });
+    if (job.company) await VN.say(c.name, `Ah, e eu vim pela <b>${job.company}</b>, por causa do contrato!`, { expr: 'smile' });
+    if (qd) await VN.say(c.name, `E não esquece do meu desconto de ${qd}% por ter esperado, hein!`, { expr: 'smug' });
     const faultExpr = job.fault === 'screen' ? 'sad' : 'worried';
     await VN.say(c.name, `É o meu <i>${job.name}</i>... ${job.symptom}`, { expr: faultExpr });
     if (job.customer.patience < .5 && Math.random() < .5) await VN.say(c.name, 'E eu tô com pressa, viu?', { expr: 'angry' });
@@ -515,17 +581,28 @@
       missionProgress('repairs');
       META.addDevice(job.model);
       G.dayQuality.push(res.integ);
-      if (res.integ >= 70) {
+      EVENTS.contractProgress(job, res.integ);
+      let payFrac = 1, fought = false;
+      if (G.day >= 2 && res.integ >= 70 && Math.random() < .05 + c.haggle * .08 + (G.event.fightMult ? .05 : 0)) {
+        // calote: o cliente se recusa a pagar o preço combinado
+        fought = true;
+        const fr = await FIGHTS.run('calote', { char: c, job, keepSprite: true });
+        payFrac = fr.pay; if (payFrac < 1) tip = 0;
+        if (payFrac > 0) lines.push(payFrac < 1 ? `desconto na marra −${Math.round((1 - payFrac) * 100)}%` : 'pagou o combinado');
+      } else if (res.integ >= 70) {
         await VN.say(c.name, pick(c.thanks), { expr: 'happy' });
         repGain(.25 * q + (res.time <= res.par ? .1 : 0));
       } else {
         await VN.say(c.name, pick(c.angry), { expr: 'sad' });
         repLoss(.3);
+        if (Math.random() < .7) G.grudges.push({ id: c.id, model: job.model, name: job.name, price: job.price });
       }
-      GAME.addMoney(pay); AUDIO.sfx('cash');
+      pay = Math.round(pay * payFrac);
+      if (pay > 0) { GAME.addMoney(pay); G.log.gross += pay; AUDIO.sfx('cash'); }
       if (tip) { GAME.addMoney(tip); G.log.tips += tip; }
       missionProgress('income', pay + tip);
-      await VN.say('', `Recebeu <b>${UI.money(pay)}</b> (qualidade ${res.integ}%${lines.length ? ' · ' + lines.join(' · ') : ''})${tip ? ` + gorjeta de <b>${UI.money(tip)}</b>` : ''}.`);
+      await VN.say('', pay > 0 ? `Recebeu <b>${UI.money(pay)}</b> (qualidade ${res.integ}%${lines.length ? ' · ' + lines.join(' · ') : ''})${tip ? ` + gorjeta de <b>${UI.money(tip)}</b>` : ''}.` : 'Você não recebeu nada por esse conserto. 😤');
+      if (!fought) { const stars = res.integ >= 95 && res.time <= res.par ? 5 : res.integ >= 88 ? 4 : res.integ >= 70 ? 3 : res.integ >= 50 ? 2 : 1; if (stars === 5 || stars <= 2 || Math.random() < .5) EVENTS.review(c, stars); }
       if (c.id === 'cida' && Math.random() < .5 && res.integ >= 70) { await VN.say(c.name, 'Toma, meu filho, um bolinho! E um trocadinho pro cafezinho.', { expr: 'happy' }); GAME.addMoney(15); }
       if (c.id === 'luna' && Math.random() < .6) await VN.say(c.name, 'Hoje à noite... vá ao cassino. Ou não. As cartas estão confusas.', { expr: 'smug' });
       if (Math.random() < .12) { const it = pick(META.ITEMS.filter(i => i.price <= 30)).id; addItem(it); await VN.say(c.name, `Ah, e toma isso aqui, sobrou na minha bolsa: ${META.ITM[it].emoji} <b>${META.ITM[it].name}</b>!`, { expr: 'smile' }); }
@@ -537,11 +614,13 @@
       await VN.say('', `Você destruiu o aparelho e teve que indenizar <b style="color:#c1121f">${UI.money(ind)}</b>.`);
       GAME.addMoney(-ind); G.log.parts += ind;
       repLoss(1);
+      EVENTS.review(c, 1);
       xpGain = 5;
     } else {
       G.combo = 0; G.dayQuality.push(0);
       await VN.say(c.name, res.reason === 'noparts' ? 'Nem peça você tem?! Que loja é essa...' : 'Sério que você desistiu? Que decepção...', { expr: 'angry' });
       repLoss(.5);
+      if (Math.random() < .5) EVENTS.review(c, 1);
     }
     META.tick('repairs');
     updateHUD();
@@ -550,6 +629,7 @@
     if (xpGain) await gainXP(xpGain);
     G.hour += rnd(1.6, 2.4); SHOP.setTime(G.hour); updateHUD();
     if (checkBroke('Você ficou sem nenhum centavo no caixa...')) return;
+    if (G.customersLeft > 0 && await EVENTS.midday()) { if (checkBroke('Um imprevisto levou seu último centavo...')) return; }
     nextCustomer();
   }
 
@@ -737,31 +817,43 @@
   // ---------- fim do dia ----------
   async function endDay() {
     G.hour = Math.max(G.hour, 18.5); SHOP.setTime(19.6); updateHUD();
-    VN.hide();
-    const rent = rentFor(G.day);
+    VN.hide(); SHOP.clearExtras();
+    const rent = rentFor(G.day), bills = ECON.bills(G.day), tax = ECON.tax(G.log.gross);
     GAME.addMoney(-rent, true); G.log.rent += rent;
+    GAME.addMoney(-bills, true); G.log.bills += bills;
+    if (tax) { GAME.addMoney(-tax, true); G.log.tax += tax; }
     let interest = 0;
     if (mod('interest') > 0 && G.money > 0) { interest = Math.min(500, Math.round(G.money * mod('interest'))); GAME.addMoney(interest, true); }
+    const extraRows = [...ECON.closeDay(G.log), ...EVENTS.contractsEndDay()];
     if (G.dayQuality.length && G.dayQuality.every(q => q >= 90)) META.bump('cleanDays');
     META.clear('day');
     AUDIO.sfx(G.money > 0 ? 'cash' : 'fail');
-    const net = G.log.income - G.log.parts - G.log.rent + interest;
-    const s = UI.screen(`<div class="card">
+    const rowNet = extraRows.filter(([t]) => !/poupan/i.test(t)).reduce((a, [, v]) => a + v, 0);
+    const net = G.log.income - G.log.parts - rent - bills - tax + interest + G.log.events + rowNet;
+    const row = (t, v) => `<tr><td>${t}</td><td class="${v >= 0 ? 'pos' : 'negv'}">${v ? (v >= 0 ? '+ ' : '− ') + UI.money(Math.abs(v)) : ''}</td></tr>`;
+    const revs = (G.dayReviews || []).slice(-3);
+    const avg = G.reviews.length ? G.reviews.reduce((a, x) => a + x.stars, 0) / G.reviews.length : 0;
+    const s = UI.screen(`<div class="card" style="max-width:760px">
       <h2>Fim do Dia ${G.day}</h2>
       <table class="sum">
-        <tr><td>Consertos (com gorjetas)</td><td class="pos">+ ${UI.money(G.log.income)}</td></tr>
-        <tr><td>Peças e indenizações</td><td class="negv">− ${UI.money(G.log.parts)}</td></tr>
-        <tr><td>Aluguel e contas</td><td class="negv">− ${UI.money(G.log.rent)}</td></tr>
-        ${interest ? `<tr><td>Rendimento 📈</td><td class="pos">+ ${UI.money(interest)}</td></tr>` : ''}
+        ${row('Consertos (com gorjetas)', G.log.income)}
+        ${row('Peças e indenizações', -G.log.parts)}
+        ${G.log.events ? row('Eventos, brigas, missões e extras', G.log.events) : ''}
+        ${row('Aluguel', -rent)}
+        ${row(`Luz e internet${DECOR.electricCount() ? ` (${DECOR.electricCount()} aparelhos ⚡)` : ''}`, -bills)}
+        ${tax ? row(`Impostos (${Math.round(tax / Math.max(1, G.log.gross) * 100)}% do faturamento)`, -tax) : ''}
+        ${interest ? row('Rendimento 📈', interest) : ''}
+        ${extraRows.map(([t, v]) => row(t, v)).join('')}
         <tr><td><b>Saldo do dia</b></td><td class="${net >= 0 ? 'pos' : 'negv'}">${net >= 0 ? '+' : '−'} ${UI.money(Math.abs(net))}</td></tr>
-        <tr><td><b>Caixa agora</b></td><td>${UI.money(G.money)}</td></tr>
+        <tr><td><b>Caixa agora</b></td><td>${UI.money(G.money)}${G.bank.savings ? ` <small>(+ ${UI.money(G.bank.savings)} na poupança)</small>` : ''}</td></tr>
       </table>
       <p>🎯 Missão: ${G.mission.txt} — ${G.mission.done ? '<b class="pos">cumprida!</b>' : `<span class="negv">${Math.min(G.mission.v, G.mission.goal)}/${G.mission.goal}</span>`}</p>
-      <p style="font-size:14px">Amanhã o aluguel será <b>${UI.money(rentFor(G.day + 1))}</b>.</p>
+      ${revs.length ? `<div class="reviews"><b>Guia do Bairro: ${avg.toFixed(1)} ★</b>${revs.map(r => `<div>${'★'.repeat(r.stars)}<span style="opacity:.25">${'★'.repeat(5 - r.stars)}</span> <b>${r.name}</b>: “${r.text}”</div>`).join('')}</div>` : ''}
+      <p style="font-size:14px">Amanhã: aluguel <b>${UI.money(rentFor(G.day + 1))}</b> + contas.</p>
       <button class="btn big" id="e-go">Continuar</button></div>`);
     await new Promise(r => s.querySelector('#e-go').onclick = r);
     AUDIO.sfx('click'); UI.closeScreen();
-    if (checkBroke('O aluguel levou tudo o que você tinha...')) return;
+    if (checkBroke('O aluguel e as contas levaram tudo o que você tinha...')) return;
     if (G.money >= GOAL && !G.won) { G.won = true; return victory(); }
     nightChoiceOrDay(false);
   }
@@ -778,30 +870,36 @@
         <div class="big-choice casino" id="n-cas"><span class="em">🎰</span>Ir ao Cassino<small>Caça-níqueis, roleta, raspadinha, Mega-Sorte... dá pra apostar TUDO. Único lugar onde dá pra fumar.</small></div>
         <div class="big-choice upg" id="n-upg"><span class="em">🛠️</span>Loja de Melhorias<small>4 melhorias sorteadas das 50 + peças em estoque.</small></div>
       </div>
-      <p style="font-size:13px;opacity:.75;margin-top:14px">Só dá tempo de uma dessas por noite. A lojinha da esquina não conta.</p>
+      <p style="font-size:13px;opacity:.75;margin-top:14px">Só dá tempo de uma dessas por noite. Lojinha, banco e catálogo não contam.</p>
       <button class="btn purple" id="n-store" style="font-size:15px">🏪 Lojinha da esquina</button>
+      <button class="btn gold" id="n-bank" style="font-size:15px">🏦 Banco do Bairro</button>
+      <button class="btn green" id="n-cat" style="font-size:15px">🛋️ Catálogo Decora+</button>
       <button class="btn" id="n-sleep" style="font-size:15px;background:#6c8cff;box-shadow:0 4px 0 #3a0ca3,0 0 0 3px #6c8cff">😴 Só dormir</button>
     </div>`, 'dim');
     s.querySelector('#n-cas').onclick = () => { AUDIO.sfx('confirm'); UI.closeScreen(); goCasino(); };
     s.querySelector('#n-upg').onclick = () => { AUDIO.sfx('confirm'); upgradeShop(); };
     s.querySelector('#n-store').onclick = () => { AUDIO.sfx('confirm'); visitStore(() => nightChoiceOrDay(false)); };
+    s.querySelector('#n-bank').onclick = () => ECON.openBank(() => nightChoiceOrDay(false));
+    s.querySelector('#n-cat').onclick = () => DECOR.openCatalog(() => nightChoiceOrDay(false));
     s.querySelector('#n-sleep').onclick = () => { AUDIO.sfx('click'); sleep(); };
   }
 
-  function sleep() {
+  async function sleep() {
     UI.closeScreen(); closeBag();
     $('#store-ui').classList.add('hidden');
     G.nightPending = false;
     META.clear('night');
     saveGame();
     UI.flash('#1b1f4a', 1);
+    await EVENTS.night();
+    if (checkBroke('Uma noite azarada levou tudo...')) return;
     startDay();
   }
 
   // ---------- loja de melhorias (4 das 50, com troca) ----------
   function upgradeShop() {
     if (!G.offer || G.offer.day !== G.day) G.offer = { day: G.day, list: META.rollUpgrades(4), rerolls: 0 };
-    const partPrice = p => Math.max(1, Math.round(REPAIR.PARTS[p].cost * (1 - Math.min(.6, mod('stockDiscount')))));
+    const partPrice = p => Math.max(1, Math.round(REPAIR.PARTS[p].cost * ECON.partMult() * (1 - Math.min(.6, mod('stockDiscount')))));
     const render = () => {
       const rc = 20 + G.offer.rerolls * 15;
       const s = UI.screen(`<div class="card" style="max-width:1020px">
@@ -919,7 +1017,7 @@
       const free = G.freeSpins > 0;
       p.innerHTML = `<div class="bet-row">${CASINO.machines.map((mm, i) => `<button class="nbtn ${i === slotIdx ? 'sel' : ''}" data-m="${i}">${mm.def.name}</button>`).join('')}</div>
         <div class="neon-title">${m.def.name}</div>
-        ${m.def.mega ? `<div class="neon-sub">JACKPOT PROGRESSIVO (3 troféus): <b style="color:#ffd23f;font-size:18px">${UI.money(CASINO.jackpot)}</b></div>` : ''}
+        ${m.def.mega ? `<div class="neon-sub">JACKPOT PROGRESSIVO (3 troféus): <b style="color:#ffd23f;font-size:18px">${UI.money(CASINO.jackpot)}</b> <small>— paga proporcional à aposta (R$ 500 leva tudo)</small></div>` : ''}
         <div class="bet-row">Aposta: ${betButtons(bets, slotBet)}<button class="nbtn allin" id="s-all" ${money <= 0 ? 'disabled' : ''}>ALL IN (${UI.money(money)})</button></div>
         <div class="bet-row"><button class="nbtn hot" id="s-spin" style="font-size:22px;padding:10px 40px" ${slotBet > money && !free ? 'disabled' : ''}>🎰 ${free ? `GIRO GRÁTIS (${G.freeSpins})` : `GIRAR (${UI.money(slotBet)})`}</button></div>
         ${smokeTip}
@@ -1091,7 +1189,7 @@
 
   function casinoBroke() {
     if (G.money > 0 || G.dead) return;
-    if (trySecondChance()) { renderCasinoPanel(); return; }
+    if (ECON.rescue() || trySecondChance()) { renderCasinoPanel(); return; }
     $('#casino-ui').classList.add('hidden');
     gameOver('Você apostou tudo... e a casa sempre vence.');
   }
@@ -1107,7 +1205,7 @@
     return false;
   }
   function checkBroke(msg) {
-    if (G.money <= 0) { if (trySecondChance()) return false; gameOver(msg); return true; }
+    if (G.money <= 0) { if (ECON.rescue()) return false; if (trySecondChance()) return false; gameOver(msg); return true; }
     return false;
   }
   async function gameOver(msg) {

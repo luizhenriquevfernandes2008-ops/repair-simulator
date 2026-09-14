@@ -69,6 +69,23 @@
     scratch: r(S + 'interface-sounds/scratch_', 5, 3, 1),
     ball: r(S + 'casino-audio/chip-lay-', 3, 1, 1),
     coin: r(S + 'casino-audio/chips-handle-', 6, 1, 1),
+    // v1.3 — eventos, brigas, decoração
+    punch: r(S + 'impact-sounds/impactPunch_heavy_', 5),
+    slap: r(S + 'impact-sounds/impactPunch_medium_', 5),
+    thud: r(S + 'impact-sounds/impactWood_heavy_', 5),
+    soft: r(S + 'impact-sounds/impactSoft_heavy_', 5),
+    key: [S + 'ui-audio/mouseclick1.ogg', S + 'ui-audio/mouserelease1.ogg'],
+    question: r(S + 'interface-sounds/question_', 4, 3, 1),
+    bong: [S + 'interface-sounds/bong_001.ogg'],
+    pluck: r(S + 'interface-sounds/pluck_', 2, 3, 1),
+    drop: r(S + 'interface-sounds/drop_', 4, 3, 1),
+    news: [S + 'music-jingles/jingles_HIT00.ogg', S + 'music-jingles/jingles_HIT03.ogg'],
+    event: [S + 'music-jingles/jingles_HIT05.ogg', S + 'music-jingles/jingles_HIT08.ogg'],
+    eventBad: [S + 'music-jingles/jingles_SAX05.ogg', S + 'digital-audio/zapThreeToneDown.ogg'],
+    eventGood: [S + 'music-jingles/jingles_PIZZI03.ogg', S + 'digital-audio/zapThreeToneUp.ogg'],
+    alarm: [S + 'digital-audio/threeTone1.ogg', S + 'digital-audio/threeTone2.ogg'],
+    pet: r(S + 'digital-audio/pepSound', 5, 1, 1),
+    jump: r(S + 'digital-audio/phaseJump', 5, 1, 1),
   };
   const pools = {};
   let muted = false, musicVol = 0.45, sfxVol = 0.8;

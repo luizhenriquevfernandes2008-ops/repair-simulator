@@ -82,7 +82,7 @@
 
     // estantes com aparelhos à venda (modelos baixados)
     for (const sx of [-4.2, 4.2]) {
-      const sh = ASSETS.get('shelves'); sh.position.set(sx, 0, -3.45); group.add(sh);
+      const sh = ASSETS.get('shelves'); sh.name = 'shelves'; sh.position.set(sx, 0, -3.45); group.add(sh);
       const ssz = sh.userData.size;
       const levels = [0.62, 1.22, 1.82].map(f => f * ssz.y / 2.44);
       const items = sx < 0 ? ['tablet', 'xpad', 'gameboy', 'phone_iphone', 'boombox', 'notch'] : ['galaxy', 'instax', 'ds', 'redphone', 'jbl', 'calc'];
@@ -110,7 +110,28 @@
     const bell = ASSETS.get('deskbell'); bell.position.set(-0.8, topY, 2.1); group.add(bell);
     const ph = ASSETS.get('moto', { size: 0.5 }); ph.position.set(0.7, topY, 2.2); ph.rotation.y = 0.5; group.add(ph);
     group.traverse(o => { if (o.isMesh) { o.receiveShadow = true; o.castShadow = o.castShadow || false; } });
+    SHOP.shelfTop = ASSETS.sizeOf(group.children.find(c => c.name === 'shelves') || new THREE.Group()).y || 2.6;
+    if (window.DECOR) DECOR.apply();
   }
+
+  // Clientes extras em cena (briga entre dois clientes)
+  const extras = [];
+  async function showExtra(def, x, fromDir = -1) {
+    const sp = await makeSprite(def, 2.8);
+    const holder = new THREE.Group(); holder.position.set(x, 0.12, 0.6); holder.add(sp.obj); scene.add(holder);
+    sp.holder = holder; extras.push(sp);
+    sp.obj.position.x = 3.5 * fromDir; sp.mesh.material.opacity = 0;
+    AUDIO.sfx('steps', { vol: .6 });
+    await TWEENS.add(0.6, e => { sp.obj.position.x = 3.5 * fromDir * (1 - e); sp.mesh.material.opacity = e; }, 'out');
+    return sp;
+  }
+  async function leaveExtra(sp, dir = 1) {
+    if (!sp || !extras.includes(sp)) return;
+    await TWEENS.add(0.5, e => { sp.obj.position.x = 3.5 * dir * e; sp.mesh.material.opacity = 1 - e; }, 'in');
+    scene.remove(sp.holder); sp.dispose(); extras.splice(extras.indexOf(sp), 1);
+  }
+  function clearExtras() { for (const sp of extras.splice(0)) { scene.remove(sp.holder); sp.dispose(); } }
+  const hooks = [];
 
   // cores de céu por hora do dia
   function setTime(h) {
@@ -148,12 +169,15 @@
   }
 
   const SHOP = {
-    scene, camera,
+    scene, camera, group, hooks, shelfTop: 2.6,
+    get sprite() { return sprite; },
     init() { build(); },
-    setTime, showCustomer, leaveCustomer, hideCustomer,
+    setTime, showCustomer, leaveCustomer, hideCustomer, showExtra, leaveExtra, clearExtras,
     onEnter() { build(); },
     update(dt, t) {
       if (sprite) sprite.update(dt);
+      for (const sp of extras) sp.update(dt);
+      for (const f of hooks) f(dt, t);
       camera.position.x = CAM.x + Math.sin(t * .3) * .05; camera.position.y = CAM.y + Math.sin(t * .5) * .02;
       camera.lookAt(LOOK);
       if (neonMat) neonMat.opacity = 0.85 + Math.sin(t * 9) * 0.05 + (Math.random() < .01 ? -.4 : 0);

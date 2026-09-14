@@ -1,4 +1,4 @@
-REPAIR SIMULATOR  (versão 1.2)
+REPAIR SIMULATOR  (versão 1.3)
 Assistência técnica de dia, cassino à noite — um roguelike estilo visual novel.
 
 COMO ABRIR
@@ -35,10 +35,30 @@ COMO JOGAR
   Ficam na MOCHILA 🎒 (tecla I). Cada item vale num contexto: conserto, dia, cassino ou sempre.
     O maço de cigarro só pode ser fumado no cassino: animação 3D, sorte +2 e prêmios +10%
     por 8 apostas (mas o cheiro tira reputação). É um item de ficção do jogo — fumar faz mal à saúde.
-  CONQUISTAS E RELÍQUIAS — 20 conquistas liberam 20 relíquias PERMANENTES, que continuam
+  CONQUISTAS E RELÍQUIAS — 25 conquistas liberam 25 relíquias PERMANENTES, que continuam
   valendo em todas as partidas, mesmo depois de falir. Veja em "Coleção" no menu.
-  FIM DO DIA — o aluguel é cobrado (e sobe 17% todo dia).
-  À NOITE — escolha UMA coisa (a lojinha da esquina não conta):
+  BRIGAS (NOVO) — clientes reclamando da garantia, recusando pagar, dois clientes brigando na
+  fila, a vizinha Dona Neusa, o Fiscal Barbosa, a "Karen" Dona Regina e o agiota Jorjão.
+  Você DIGITA o que quer dizer. Cada personagem tem personalidade própria e responde ao que
+  você escreveu: desculpas, empatia, ofertas ("te dou 20%", "devolvo metade", "conserto de
+  graça"), piadas, papo de futebol, cantadas, perguntas... Xingar e ameaçar só piora.
+  O botão 💡 mostra ideias de frases. Tudo funciona offline, sem internet.
+  EVENTOS (NOVO) — a Gazeta do Bairro traz o evento do dia (20 tipos). No meio do expediente
+  acontecem imprevistos com escolhas e minigames: assalto (clique no ladrão!), rato, pombo,
+  carteira perdida, incêndio (digite rápido!), golpe do Pix, rádio, contratos de empresas...
+  De madrugada também: arrombamento, sonhos com números da sorte, carta da tia Neide...
+  CATÁLOGO DECORA+ (NOVO) — 33 decorações (modelos 3D baixados) que aparecem na loja:
+  sofás, piano, fliperama, máquina de refrigerante, Zoltar, aquário, plantas, TV, câmera de
+  segurança, extintor, mascotes (gato, gatão, cachorro) que andam pela loja — clique neles
+  pra fazer carinho (sorte +1 no dia). Cada uma dá bônus e soma ESTILO (4 níveis de bônus).
+  BANCO DO BAIRRO (NOVO) — poupança protegida (rende 1%/dia; ladrão e cassino não alcançam;
+  se o caixa zerar, o banco saca sozinho), empréstimo em 5 parcelas e o agiota Jorjão.
+  ECONOMIA (NOVO) — aluguel com curva nova (começo apertado, fim de jogo exigente), conta de
+  luz/internet (sobe com aparelhos elétricos), imposto progressivo sobre o faturamento e um
+  índice de preços das peças que muda todo dia. O jackpot da Mega paga proporcional à aposta
+  e a sorte tem retorno decrescente (o cassino não vira mais máquina de dinheiro).
+  FIM DO DIA — aluguel, contas e impostos são cobrados; avaliações do Guia do Bairro.
+  À NOITE — escolha UMA coisa (lojinha, banco e catálogo não contam):
     Cassino: caça-níqueis (3 máquinas, jackpot progressivo), roleta, raspadinhas,
              Mega-Sorte (sorteio ao sair) e caixa misteriosa. Dá pra apostar TUDO.
     Loja de melhorias: 4 das 50 melhorias (troca por dinheiro) e peças para o estoque.

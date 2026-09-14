@@ -220,7 +220,8 @@
   function payout(res, bet, mega) {
     const [a, b, c] = res;
     if (a === b && b === c) {
-      if (a === 'trophy' && mega) return { win: jackpot, jackpot: true, mult: 0 };
+      // jackpot proporcional à aposta (aposta máxima de R$ 500 leva o valor inteiro)
+      if (a === 'trophy' && mega) return { win: Math.round(jackpot * Math.min(1, bet / 500)), jackpot: true, mult: 0 };
       return { win: bet * PAY3[a], mult: PAY3[a] };
     }
     const cherries = res.filter(x => x === 'cherry').length;
@@ -266,7 +267,7 @@
     if (st.refund) GAME.addMoney(st.refund, true);
     if (win > 0) {
       GAME.addMoney(win, true);
-      if (p.jackpot) { jackpot = 5000; UI.bigText('JACKPOT!!!'); AUDIO.sfx('jackpot'); celebrate(m, 5); setLED(m, UI.money(win), '#ffd23f'); }
+      if (p.jackpot) { jackpot = Math.max(5000, jackpot - win); UI.bigText('JACKPOT!!!'); AUDIO.sfx('jackpot'); celebrate(m, 5); setLED(m, UI.money(win), '#ffd23f'); }
       else if (p.mult >= 20) { UI.bigText('SUPER PRÊMIO!'); AUDIO.sfx('bigWin'); celebrate(m, 3); setLED(m, '+' + UI.money(win), '#52ff8f'); }
       else { AUDIO.sfx(p.mult >= 5 ? 'win' : 'winSmall'); celebrate(m, p.mult >= 5 ? 1.5 : .7); setLED(m, '+' + UI.money(win), '#52ff8f'); }
       AUDIO.sfx('chips');

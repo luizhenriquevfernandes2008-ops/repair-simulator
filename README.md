@@ -16,9 +16,14 @@
 - **Bancada 3D** com 34 aparelhos (celulares, tablets, notebooks, consoles, controles, câmeras, rádio, drones, óculos VR...) e 9 ferramentas: parafusos, soprador, palheta, pinça, multímetro, ferro de solda, escova e lupa. Meça os pontos de teste para descobrir o defeito real — o cliente nem sempre sabe o que tem.
 - **XP e level up:** a cada nível, escolha 1 de 3 melhorias sorteadas entre 50 (Comum, Rara, Épica e Lendária).
 - **Lojinha da esquina:** 32 itens que rotacionam todo dia e vão para a mochila. O maço de cigarro só pode ser usado no cassino, com animação e bônus de sorte (item de ficção — fumar faz mal à saúde).
+- **Brigas com IA:** clientes reclamando da garantia, recusando pagar, dois clientes brigando na fila, a vizinha, o fiscal, a "Karen" e o agiota. Você **digita** o que quer dizer e cada personagem responde conforme a personalidade e o humor do momento: desculpas, empatia, ofertas ("te dou 20%"), piadas, cantadas, perguntas, papo de futebol... A IA é local e funciona sem internet.
+- **Eventos aleatórios:** a Gazeta do Bairro traz o evento do dia (20 tipos) e, no meio do expediente, acontecem imprevistos com escolhas e minigames: assalto, rato, pombo, carteira perdida, incêndio, golpe do Pix, contratos de empresas e sustos de madrugada.
+- **Catálogo Decora+:** 33 decorações (modelos 3D baixados) que aparecem na loja, dão bônus e somam "estilo". Os mascotes andam pela loja e dá pra fazer carinho.
+- **Banco do Bairro:** poupança protegida, empréstimo parcelado e o agiota Jorjão.
+- **Economia balanceada:** aluguel com curva calibrada por simulação, contas de luz, imposto progressivo e um índice de preços das peças que muda todo dia.
 - **À noite:** cassino com neon (3 caça-níqueis, roleta, raspadinhas, Mega-Sorte e caixa misteriosa — dá pra apostar TUDO) ou a loja de melhorias.
 - **Roguelike:** o aluguel sobe todo dia. **Se o dinheiro acabar, o jogo acaba.**
-- **Conquistas:** 20 conquistas liberam relíquias permanentes que continuam valendo nas próximas partidas.
+- **Conquistas:** 25 conquistas liberam relíquias permanentes que continuam valendo nas próximas partidas.
 
 Controles: mouse · teclas **1–9** trocam de ferramenta · **I** mochila · **M** som · **F** tela cheia · **Espaço** avança diálogo / gira o caça-níquel.
 

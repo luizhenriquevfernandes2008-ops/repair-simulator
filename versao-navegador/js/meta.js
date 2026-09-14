@@ -129,6 +129,10 @@
     { id: 'scratch', name: 'Rei da Raspadinha', desc: 'Ganhe 5 raspadinhas no cassino.', stat: 'scratchWins', goal: 5, relic: { name: 'Unha da sorte', emoji: '💅', desc: 'Prêmios de raspadinha +20%.', mods: { scratch: .2 } } },
     { id: 'haggle', name: 'Negociador', desc: 'Negocie com sucesso 10 vezes.', stat: 'haggles', goal: 10, relic: { name: 'Gravata da sorte', emoji: '👔', desc: 'Negociar +10%.', mods: { haggle: .1 } } },
     { id: 'nights', name: 'Rato de Cassino', desc: 'Vá ao cassino em 10 noites.', stat: 'casinoNights', goal: 10, relic: { name: 'Cartão VIP dourado', emoji: '💳', desc: 'Ganha R$ 30 em fichas toda noite no cassino.', mods: { nightCash: 30 } } },
+    { id: 'diplomat', name: 'Diplomata', desc: 'Acalme 10 brigas conversando.', stat: 'fightsWon', goal: 10, relic: { name: 'Megafone da paz', emoji: '🕊️', desc: 'Clientes irritados começam as brigas bem mais calmos.', mods: { calm: 15 } } },
+    { id: 'decorator', name: 'Decorador', desc: 'Tenha 8 decorações numa partida.', stat: 'decorOwned', goal: 8, relic: { name: 'Revista de decoração', emoji: '🛋️', desc: 'Catálogo Decora+ 15% mais barato.', mods: { decorDiscount: .15 } } },
+    { id: 'survivor', name: 'Sobrevivente', desc: 'Passe por 25 eventos aleatórios.', stat: 'events', goal: 25, relic: { name: 'Amuleto do acaso', emoji: '🧿', desc: 'Eventos bons no jornal ficam 30% mais frequentes.', mods: { goodEvents: .3 } } },
+    { id: 'hero', name: 'Pega Ladrão', desc: 'Pegue 2 ladrões no flagra.', stat: 'thieves', goal: 2, relic: { name: 'Taco de beisebol', emoji: '🏏', desc: 'Contas de luz e internet 20% mais baratas (a vizinhança te respeita).', mods: { billsCut: .2 } } },
   ];
 
   // ---------- MISSÕES DO DIA ----------
@@ -162,6 +166,8 @@
       for (const id of G.upgrades || []) { const u = UPG[id]; if (u && u.mods[key]) v += u.mods[key]; }
       for (const b of G.buffs || []) if (b.mods[key]) v += b.mods[key];
       for (const id in (G.bag || {})) { const it = ITM[id]; if (it && it.passive && G.bag[id] > 0 && it.passive[key]) v += it.passive[key]; }
+      if (window.DECOR) v += DECOR.modSum(key);
+      if (G.event && G.event.mods && G.event.mods[key]) v += G.event.mods[key];
       return v;
     },
     has(key) { return this.mod(key) > 0; },
@@ -204,7 +210,7 @@
       out.forEach(id => this.seeUpg(id));
       return out;
     },
-    upgradePrice(id, day) { const base = { comum: 110, raro: 230, epico: 420, lendario: 760 }[UPG[id].rarity]; return Math.round(base * (1 + day * .04)); },
+    upgradePrice(id, day) { const base = { comum: 110, raro: 230, epico: 420, lendario: 760 }[UPG[id].rarity]; return Math.round(base * (1 + day * .05)); },
     rollStore(n) {
       const pool = ITEMS.slice(); const out = [];
       // o maço de cigarro aparece com frequência (é o carro-chefe da lojinha)

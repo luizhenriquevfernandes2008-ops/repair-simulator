@@ -85,6 +85,50 @@
     vending: { file: 'vending_machine_0cx6', rot: [0, 0, 0], size: 2.9, fit: 'y' },
     speaker: { file: 'speaker_5aco', rot: [0, 0, 0], size: 2.0, fit: 'y' },
     gambleicon: { file: 'gambling_icon_3ef3', rot: [0, 0, 0], size: 1.4, fit: 'y' },
+    // --- decoração (catálogo) ---
+    d_sofa: { file: 'deco_sofa', rot: [0, 0, 0], size: 2.0 },
+    d_sofa2: { file: 'deco_sofa2', rot: [0, 0, 0], size: 2.2 },
+    d_piano: { file: 'deco_piano', rot: [0, 0, 0], size: 1.9 },
+    d_zoltar: { file: 'deco_zoltar', rot: [0, 0, 0], size: 2.0, fit: 'y' },
+    d_bookcase: { file: 'deco_bookcase', rot: [0, 0, 0], size: 2.2, fit: 'y' },
+    d_fishtank: { file: 'deco_fishtank', rot: [0, 0, 0], size: 1.3, fit: 'y' },
+    d_beanbag: { file: 'deco_beanbag', rot: [0, 0, 0], size: 1.0 },
+    d_plantbig: { file: 'deco_plantbig', rot: [0, 0, 0], size: 1.1, fit: 'y' },
+    d_plantwhite: { file: 'deco_plantwhite', rot: [0, 0, 0], size: 1.5, fit: 'y' },
+    d_houseplant: { file: 'deco_houseplant2', rot: [0, 0, 0], size: 1.0, fit: 'y' },
+    d_floorlamp: { file: 'deco_floorlamp', rot: [0, 0, 0], size: 1.7, fit: 'y' },
+    d_guitar: { file: 'deco_guitar', rot: [-78, 0, 0], size: 1.25, fit: 'y' },
+    d_extinguisher: { file: 'deco_extinguisher', rot: [0, 0, 0], size: 0.7, fit: 'y' },
+    d_tv: { file: 'deco_tv3', rot: [0, 90, 0], size: 1.25, fit: 'max' },
+    d_rug: { file: 'deco_rug', rot: [0, 0, 0], size: 2.2 },
+    d_rug2: { file: 'deco_rug2', rot: [0, 0, 0], size: 2.6 },
+    d_clock: { file: 'deco_clock', rot: [0, -90, 0], size: 0.75, fit: 'max' },
+    d_camera: { file: 'deco_camera', rot: [0, 0, 0], size: 0.6, fit: 'max' },
+    d_ceilfan: { file: 'deco_ceilfan', rot: [0, 0, 0], size: 1.4 },
+    d_lava: { file: 'deco_lavalamp', rot: [0, 0, 0], size: 0.6, fit: 'y' },
+    d_bonsai: { file: 'deco_bonsai', rot: [0, 0, 0], size: 0.6, fit: 'y' },
+    d_cactus: { file: 'deco_cactus', rot: [0, 0, 0], size: 0.5, fit: 'y' },
+    d_fishbowl: { file: 'deco_fishbowl', rot: [0, 0, 0], size: 0.45, fit: 'y' },
+    d_parrot: { file: 'deco_parrot', rot: [0, 0, 0], size: 0.55, fit: 'y' },
+    d_catloaf: { file: 'deco_catloaf', rot: [0, 0, 0], size: 0.55 },
+    d_record: { file: 'deco_record', rot: [0, 0, 0], size: 0.65 },
+    d_coffee: { file: 'deco_coffee', rot: [0, 0, 0], size: 0.5, fit: 'y' },
+    d_cat: { file: 'deco_cat', rot: [0, 0, 0], size: 0.72, fit: 'y', anim: true },
+    d_cat2: { file: 'deco_cat2', rot: [0, 0, 0], size: 0.75, fit: 'y', anim: true },
+    d_dog: { file: 'deco_dog', rot: [0, 0, 0], size: 0.85, fit: 'y', anim: true },
+    // --- eventos ---
+    e_wallet: { file: 'ev_wallet', rot: [0, 0, 0], size: 0.35 },
+    e_rat: { file: 'ev_rat', rot: [0, 0, 0], size: 0.4, anim: true },
+    e_pigeon: { file: 'ev_pigeon', rot: [0, 0, 0], size: 0.45, fit: 'max', anim: true },
+    e_box: { file: 'ev_box', rot: [0, 0, 0], size: 0.6 },
+    e_mop: { file: 'ev_mop', rot: [0, 0, 0], size: 1.0, fit: 'y' },
+    e_coinbag: { file: 'ev_coinbag', rot: [0, 0, 0], size: 0.5 },
+    e_piggy: { file: 'ev_piggy', rot: [0, 0, 0], size: 0.6 },
+    e_magazine: { file: 'ev_magazine', rot: [0, 0, 0], size: 0.6 },
+    e_briefcase: { file: 'ev_briefcase', rot: [0, 0, 0], size: 0.6 },
+    e_fire: { file: 'ev_fire', rot: [0, 0, 0], size: 0.9, fit: 'y' },
+    e_umbrella: { file: 'ev_umbrella', rot: [0, 0, 0], size: 0.9, fit: 'max' },
+    e_candles: { file: 'ev_candles', rot: [0, 0, 0], size: 0.4 },
   };
 
   const cache = {};
@@ -127,10 +171,11 @@
     if (!g) {
       inner = new THREE.Mesh(new THREE.BoxGeometry(1, 0.2, 1), new THREE.MeshStandardMaterial({ color: 0xff66aa }));
     } else {
-      inner = g.scene.clone(true);
+      inner = m.anim ? cloneSkinned(g.scene) : g.scene.clone(true);
       inner.traverse(o => {
         if (o.isMesh) {
           o.castShadow = true; o.receiveShadow = true;
+          if (o.isSkinnedMesh) o.frustumCulled = false;
           if (opts.cloneMat !== false) {
             o.material = Array.isArray(o.material) ? o.material.map(x => x.clone()) : o.material.clone();
           }
@@ -155,7 +200,24 @@
     holder.position.set(-c.x * s, -box.min.y * s, -c.z * s);
     wrap.add(holder);
     wrap.userData.size = new THREE.Vector3(sz.x * s, sz.y * s, sz.z * s);
+    wrap.userData.inner = inner;
     return wrap;
+  }
+
+  // clone com esqueleto (mesmo algoritmo do SkeletonUtils.clone do three.js)
+  function cloneSkinned(source) {
+    const srcOf = new Map(), cloneOf = new Map();
+    const clone = source.clone(true);
+    (function par(a, b) { srcOf.set(b, a); cloneOf.set(a, b); for (let i = 0; i < a.children.length; i++) par(a.children[i], b.children[i]); })(source, clone);
+    clone.traverse(node => {
+      if (!node.isSkinnedMesh) return;
+      const src = srcOf.get(node);
+      node.skeleton = src.skeleton.clone();
+      node.bindMatrix.copy(src.bindMatrix);
+      node.skeleton.bones = src.skeleton.bones.map(b => cloneOf.get(b));
+      node.bind(node.skeleton, node.bindMatrix);
+    });
+    return clone;
   }
 
   function sizeOf(obj) {
@@ -243,8 +305,14 @@
     });
   }
 
+  // Modelo animado (bichinhos): cópia com esqueleto próprio + as animações do arquivo
+  function getAnimated(key, opts = {}) {
+    const obj = get(key, opts); const g = loaded[MODELS[key].file];
+    return { obj, clips: (g && g.animations) || [], root: obj.userData.inner };
+  }
+
   window.ASSETS = {
-    MODELS, get, sizeOf, setGlow, tint, canvasTex, thumb, svgTexture,
+    MODELS, get, getAnimated, sizeOf, setGlow, tint, canvasTex, thumb, svgTexture,
     async preload(onProgress) {
       await preloadAll(onProgress);
       for (const f of Object.keys(cache)) loaded[f] = await cache[f];

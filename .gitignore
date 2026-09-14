@@ -7,3 +7,5 @@ versao-navegador/tools/autotest.js
 __pycache__/
 Thumbs.db
 desktop.ini
+versao-navegador/tools/autoplay.js
+versao-navegador/tools/preview.html
